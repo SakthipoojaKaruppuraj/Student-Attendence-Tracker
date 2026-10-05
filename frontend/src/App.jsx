@@ -11,12 +11,12 @@ import Attendance from "./pages/Attendance";
 import Tasks from "./pages/Tasks";
 import StudentData from "./pages/StudentData";
 import StudentProfile from "./pages/StudentProfile";
+import AdminManagement from "./pages/AdminManagement";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         <Route
           path="/"
           element={
@@ -35,6 +35,11 @@ function App() {
         <Route
           path="/admin/dashboard"
           element={<AdminDashboard />}
+        />
+
+        <Route
+          path="/admin/manage-admins"
+          element={<AdminManagement />}
         />
 
         <Route
@@ -66,7 +71,6 @@ function App() {
             />
           }
         />
-
       </Routes>
     </BrowserRouter>
   );

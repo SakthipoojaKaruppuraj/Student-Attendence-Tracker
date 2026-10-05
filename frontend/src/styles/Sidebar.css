@@ -6,21 +6,45 @@
   position: fixed;
   left: 0;
   top: 0;
+  z-index: 100;
 }
 
 .sidebar-logo {
-  padding: 25px 20px;
+  padding: 22px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-logo h2 {
   font-size: 18px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
-.sidebar-logo p {
-  font-size: 13px;
-  opacity: 0.75;
+.sidebar-role-badge {
+  margin-top: 4px;
+}
+
+.badge-org {
+  display: inline-block;
+  background: #f59e0b;
+  color: #78350f;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.badge-domain {
+  display: inline-block;
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-nav {
@@ -37,6 +61,7 @@
   color: white;
   text-decoration: none;
   font-size: 15px;
+  transition: background 0.2s ease;
 }
 
 .sidebar-link:hover {

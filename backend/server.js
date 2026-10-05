@@ -22,6 +22,7 @@ app.use(express.json());
 
 // Admin
 app.use("/api/admin", adminRoutes);
+app.use("/api/admins", adminRoutes);
 
 // Attendance
 app.use("/api/attendance", attendanceRoutes);

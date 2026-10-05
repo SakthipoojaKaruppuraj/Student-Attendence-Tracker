@@ -33,8 +33,19 @@ function StudentData() {
     try {
       setFetching(true);
 
+      const adminData = localStorage.getItem("admin");
+      let domainParam = "";
+      if (adminData) {
+        try {
+          const parsed = JSON.parse(adminData);
+          if (parsed.role === "domain_admin" && parsed.domain && parsed.domain !== "All") {
+            domainParam = `?domain=${encodeURIComponent(parsed.domain)}`;
+          }
+        } catch (e) {}
+      }
+
       const response = await axios.get(
-        `${API_URL}/api/students`
+        `${API_URL}/api/students${domainParam}`
       );
 
       if (response.data.success) {

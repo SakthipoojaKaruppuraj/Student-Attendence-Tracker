@@ -546,6 +546,8 @@ router.post(
 
 router.get("/", (req, res) => {
   try {
+    const { domain } = req.query;
+
     const masterFilePath = path.join(
       __dirname,
       "../data/master_student_data.json"
@@ -566,17 +568,28 @@ router.get("/", (req, res) => {
       )
     );
 
+    let students = data.students || [];
+
+    if (domain && domain !== "All" && domain !== "all") {
+      const cleanDomain = domain.toLowerCase().trim();
+      students = students.filter((s) => {
+        const sVertical = (s.soi_lab_vertical || "").toLowerCase().trim();
+        const sDept = (s.department || "").toLowerCase().trim();
+        return (
+          sVertical.includes(cleanDomain) ||
+          sDept.includes(cleanDomain) ||
+          cleanDomain.includes(sVertical) ||
+          cleanDomain.includes(sDept)
+        );
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      students: data.students || [],
-      totalStudents:
-        data.students
-          ? data.students.length
-          : 0,
-      uploadedAt:
-        data.uploadedAt || null,
-      originalFileName:
-        data.originalFileName || null,
+      students,
+      totalStudents: students.length,
+      uploadedAt: data.uploadedAt || null,
+      originalFileName: data.originalFileName || null,
     });
   } catch (error) {
     console.error(

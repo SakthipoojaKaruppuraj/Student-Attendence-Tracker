@@ -200,7 +200,20 @@ function generateSubmissionId(submissions) {
 
 router.get("/", async (req, res) => {
   try {
-    const tasks = await readCsv(tasksFilePath);
+    const { domain } = req.query;
+    let tasks = await readCsv(tasksFilePath);
+
+    if (domain && domain !== "All" && domain !== "all") {
+      const cleanDomain = domain.toLowerCase().trim();
+      tasks = tasks.filter((t) => {
+        const tDomain = (t.domain || "").toLowerCase().trim();
+        return (
+          tDomain === "all" ||
+          tDomain.includes(cleanDomain) ||
+          cleanDomain.includes(tDomain)
+        );
+      });
+    }
 
     res.json({
       success: true,

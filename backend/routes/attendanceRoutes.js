@@ -20,13 +20,29 @@ const attendanceFile = path.join(
 // --------------------------------------------------
 
 router.get("/students", (req, res) => {
+  const { domain } = req.query;
   const masterFilePath = path.join(__dirname, "../data/master_student_data.json");
 
   if (fs.existsSync(masterFilePath)) {
     try {
       const data = JSON.parse(fs.readFileSync(masterFilePath, "utf8"));
+      let rawStudents = data.students || [];
 
-      const students = (data.students || []).map((student) => ({
+      if (domain && domain !== "All" && domain !== "all") {
+        const cleanDomain = domain.toLowerCase().trim();
+        rawStudents = rawStudents.filter((s) => {
+          const sVertical = (s.soi_lab_vertical || "").toLowerCase().trim();
+          const sDept = (s.department || "").toLowerCase().trim();
+          return (
+            sVertical.includes(cleanDomain) ||
+            sDept.includes(cleanDomain) ||
+            cleanDomain.includes(sVertical) ||
+            cleanDomain.includes(sDept)
+          );
+        });
+      }
+
+      const students = rawStudents.map((student) => ({
         student_id:
           student.roll_number ||
           student.register_number ||
@@ -77,6 +93,8 @@ router.get("/students", (req, res) => {
 
 router.get("/master-report", (req, res) => {
   try {
+    const { domain } = req.query;
+
     const masterFilePath = path.join(
       __dirname,
       "../data/master_student_data.json"
@@ -89,6 +107,20 @@ router.get("/master-report", (req, res) => {
         fs.readFileSync(masterFilePath, "utf8")
       );
       masterStudents = data.students || [];
+
+      if (domain && domain !== "All" && domain !== "all") {
+        const cleanDomain = domain.toLowerCase().trim();
+        masterStudents = masterStudents.filter((s) => {
+          const sVertical = (s.soi_lab_vertical || "").toLowerCase().trim();
+          const sDept = (s.department || "").toLowerCase().trim();
+          return (
+            sVertical.includes(cleanDomain) ||
+            sDept.includes(cleanDomain) ||
+            cleanDomain.includes(sVertical) ||
+            cleanDomain.includes(sDept)
+          );
+        });
+      }
     } else if (fs.existsSync(studentsFile)) {
       const fileContent = fs.readFileSync(studentsFile, "utf8");
       const lines = fileContent.split(/\r?\n/).filter((l) => l.trim() !== "");

@@ -1,2 +1,4 @@
-username,password,role
-admin,$2b$10$/Bg2Sv8tfTRBWqTovUBQAOl4kikS3a76RwXYzgcxD8vX3HUOm3c1O,admin
+admin_id,username,password,name,role,domain,created_at
+ADM001,admin,$2b$10$/Bg2Sv8tfTRBWqTovUBQAOl4kikS3a76RwXYzgcxD8vX3HUOm3c1O,Organisation Admin,org_admin,All,2026-10-05T00:00:00.000Z
+ADM002,bw_admin,$2b$10$KcS3myrPvNUo8mtGmIUFBek4gJCu487dbe5v1YO/nXvSs4SXVnT5i,Blockchain And Web 3.0,domain_admin,BW - Blockchain and Web3.0 Lab,2026-10-05T10:52:40.849Z
+ADM003,ad_admin,$2b$10$qva9FfJvA.uX3izz1lGKWehBbkqSh/QsUkz0TLx47i3TEJhE2BIHu,AI and Datascience lab,domain_admin,AI and Data Science,2026-10-05T10:54:31.068Z

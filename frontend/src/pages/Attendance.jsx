@@ -43,13 +43,30 @@ function Attendance() {
     }
   }, [navigate]);
 
+  const getDomainParam = () => {
+    const adminData = localStorage.getItem("admin");
+    if (adminData) {
+      try {
+        const parsed = JSON.parse(adminData);
+        if (parsed.role === "domain_admin" && parsed.domain && parsed.domain !== "All") {
+          return `domain=${encodeURIComponent(parsed.domain)}`;
+        }
+      } catch (e) {}
+    }
+    return "";
+  };
+
   // ------------------------------------------
   // LOAD STUDENTS
   // ------------------------------------------
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/attendance/students`);
+        const domainParam = getDomainParam();
+        const url = domainParam
+          ? `${API_BASE}/attendance/students?${domainParam}`
+          : `${API_BASE}/attendance/students`;
+        const response = await axios.get(url);
         setStudents(response.data);
       } catch (error) {
         console.error("Unable to load students:", error);
@@ -300,7 +317,12 @@ function Attendance() {
   // ------------------------------------------
   const downloadMasterCSV = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/attendance/master-report`);
+      const domainParam = getDomainParam();
+      const reportUrl = domainParam
+        ? `${API_BASE}/attendance/master-report?${domainParam}`
+        : `${API_BASE}/attendance/master-report`;
+
+      const response = await axios.get(reportUrl);
 
       if (!response.data.success) {
         alert("Failed to generate master report.");

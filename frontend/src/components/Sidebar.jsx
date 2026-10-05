@@ -5,96 +5,96 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const adminData = localStorage.getItem("admin");
+  let admin = null;
+  if (adminData) {
+    try {
+      admin = JSON.parse(adminData);
+    } catch (e) {
+      admin = null;
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("admin");
     navigate("/admin/login");
   };
 
+  const isOrgAdmin = admin?.role === "org_admin";
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
         <h2>SMS Tracker</h2>
-        <p>Admin Portal</p>
+        <div className="sidebar-role-badge">
+          {isOrgAdmin ? (
+            <span className="badge-org">👑 Organisation Admin</span>
+          ) : (
+            <span className="badge-domain">
+              📍 {admin?.domain || "Domain Admin"}
+            </span>
+          )}
+        </div>
       </div>
 
       <nav className="sidebar-nav">
-
         {/* Dashboard */}
         <Link
           to="/admin/dashboard"
           className={`sidebar-link ${
-            location.pathname === "/admin/dashboard"
-              ? "active"
-              : ""
+            location.pathname === "/admin/dashboard" ? "active" : ""
           }`}
         >
           📊 Dashboard
         </Link>
 
+        {/* Organisation Admin Exclusive: Manage Admins */}
+        {isOrgAdmin && (
+          <Link
+            to="/admin/manage-admins"
+            className={`sidebar-link ${
+              location.pathname === "/admin/manage-admins" ? "active" : ""
+            }`}
+          >
+            🛡️ Manage Admins
+          </Link>
+        )}
+
         {/* Attendance */}
         <Link
           to="/admin/attendance"
           className={`sidebar-link ${
-            location.pathname === "/admin/attendance"
-              ? "active"
-              : ""
+            location.pathname === "/admin/attendance" ? "active" : ""
           }`}
         >
           📅 Attendance
         </Link>
 
+        {/* Student Data */}
         <Link
           to="/admin/students"
           className={`sidebar-link ${
-            location.pathname === "/admin/students"
-              ? "active"
-              : ""
+            location.pathname === "/admin/students" ? "active" : ""
           }`}
->
-  👥 Student Data
-</Link>
+        >
+          👥 Student Data
+        </Link>
 
         {/* Everyday Tasks */}
         <Link
           to="/admin/tasks"
           className={`sidebar-link ${
-            location.pathname === "/admin/tasks"
-              ? "active"
-              : ""
+            location.pathname === "/admin/tasks" ? "active" : ""
           }`}
         >
           📝 Everyday Tasks
         </Link>
 
-        {/* Projects - Coming Later */}
-        <Link
-          to="/admin/projects"
-          className={`sidebar-link ${
-            location.pathname === "/admin/projects"
-              ? "active"
-              : ""
-          }`}
-        >
-          📋 Projects
-        </Link>
-
-        {/* Reports - Coming Later */}
-        <Link
-          to="/admin/reports"
-          className={`sidebar-link ${
-            location.pathname === "/admin/reports"
-              ? "active"
-              : ""
-          }`}
-        >
-          📈 Reports
-        </Link>
-
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="sidebar-link"
+          className="sidebar-link logout-btn"
           style={{
             background: "none",
             border: "none",
@@ -105,9 +105,8 @@ function Sidebar() {
             color: "#f87171",
           }}
         >
-          🚪 Logout
+          🚪 Logout ({admin?.name || admin?.username || "Admin"})
         </button>
-
       </nav>
     </aside>
   );
