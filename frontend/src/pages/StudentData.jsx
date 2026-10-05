@@ -19,6 +19,9 @@ function StudentData() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [uploadedAt, setUploadedAt] = useState(null);
   const [originalFileName, setOriginalFileName] = useState("");
+  const [history, setHistory] = useState([]);
+  const [uploadMode, setUploadMode] = useState("replace");
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
 
   const [search, setSearch] = useState(initialSearch);
   const [selectedStudentModal, setSelectedStudentModal] = useState(null);
@@ -56,6 +59,7 @@ function StudentData() {
         setOriginalFileName(
           response.data.originalFileName || ""
         );
+        setHistory(response.data.history || []);
 
         if (initialSearch && studentList.length > 0) {
           const q = initialSearch.toLowerCase();
@@ -120,11 +124,11 @@ function StudentData() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 100 * 1024 * 1024) {
       setSelectedFile(null);
 
       setError(
-        "File size must be less than 10 MB."
+        "File size must be less than 100 MB."
       );
 
       return;
@@ -146,8 +150,8 @@ function StudentData() {
       setError("");
 
       const formData = new FormData();
-
       formData.append("file", selectedFile);
+      formData.append("mode", uploadMode);
 
       const response = await axios.post(
         `${API_URL}/api/students/upload`,
@@ -156,7 +160,9 @@ function StudentData() {
 
       if (response.data.success) {
         setMessage(
-          `Student data uploaded successfully. ${response.data.totalStudents} students loaded.`
+          uploadMode === "replace"
+            ? `Old data removed. ${response.data.totalStudents} new student records loaded.`
+            : `Student data merged successfully. Total ${response.data.totalStudents} students available.`
         );
 
         setSelectedFile(null);
@@ -173,6 +179,45 @@ function StudentData() {
         backendMessage ||
           "Failed to upload student data."
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Clear all data
+  const handleClearAllData = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+      setError("");
+      const response = await axios.delete(`${API_URL}/api/students`);
+      if (response.data.success) {
+        setMessage("All student data cleared successfully.");
+        setShowClearConfirmModal(false);
+        await fetchStudents();
+      }
+    } catch (err) {
+      console.error("Clear data error:", err);
+      setError("Failed to clear student data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remove single sheet history
+  const handleRemoveHistoryItem = async (id) => {
+    try {
+      setLoading(true);
+      setMessage("");
+      setError("");
+      const response = await axios.delete(`${API_URL}/api/students/history/${id}`);
+      if (response.data.success) {
+        setMessage("Selected file sheet record removed.");
+        await fetchStudents();
+      }
+    } catch (err) {
+      console.error("Remove sheet error:", err);
+      setError("Failed to remove sheet record.");
     } finally {
       setLoading(false);
     }
@@ -222,9 +267,50 @@ function StudentData() {
               <h2>Upload Student Data</h2>
 
               <p>
-                Upload an Excel or CSV file containing
-                the student master data.
+                Upload an Excel or CSV file containing the student master data.
               </p>
+            </div>
+          </div>
+
+          {/* Upload Action Mode Options */}
+          <div className="upload-mode-container">
+            <label className="mode-label">Select Upload Option:</label>
+            <div className="mode-options-grid">
+              <div
+                className={`mode-card ${uploadMode === "replace" ? "active" : ""}`}
+                onClick={() => setUploadMode("replace")}
+              >
+                <div className="mode-radio">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    checked={uploadMode === "replace"}
+                    onChange={() => setUploadMode("replace")}
+                  />
+                </div>
+                <div className="mode-info">
+                  <strong>🔄 Replace Old Data (Remove & Overwrite)</strong>
+                  <p>Remove previous student records and load strictly this new sheet.</p>
+                </div>
+              </div>
+
+              <div
+                className={`mode-card ${uploadMode === "merge" ? "active" : ""}`}
+                onClick={() => setUploadMode("merge")}
+              >
+                <div className="mode-radio">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    checked={uploadMode === "merge"}
+                    onChange={() => setUploadMode("merge")}
+                  />
+                </div>
+                <div className="mode-info">
+                  <strong>➕ Merge / Append Data</strong>
+                  <p>Keep current student records and combine/update with new sheet entries.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -243,7 +329,7 @@ function StudentData() {
             </p>
 
             <p className="upload-limit">
-              Maximum file size: 10 MB
+              Maximum file size: 100 MB
             </p>
 
             <label
@@ -290,7 +376,9 @@ function StudentData() {
             >
               {loading
                 ? "Uploading..."
-                : "Upload Student Data"}
+                : uploadMode === "replace"
+                ? "Upload & Overwrite Data"
+                : "Upload & Merge Data"}
             </button>
 
           </div>
@@ -308,6 +396,58 @@ function StudentData() {
             </div>
           )}
 
+        </section>
+
+        {/* Uploaded Data Sheets & Management */}
+        <section className="uploaded-sheets-card">
+          <div className="section-heading-row">
+            <div>
+              <h2>Uploaded Data Sheets & Management</h2>
+              <p>View uploaded sheet history or reset the master student database.</p>
+            </div>
+            {totalStudents > 0 && (
+              <button
+                className="clear-all-button"
+                onClick={() => setShowClearConfirmModal(true)}
+              >
+                🗑️ Clear All Student Data
+              </button>
+            )}
+          </div>
+
+          {history && history.length > 0 ? (
+            <div className="sheets-history-list">
+              {history.map((item) => (
+                <div key={item.id} className="sheet-history-item">
+                  <div className="sheet-icon">📊</div>
+                  <div className="sheet-details">
+                    <strong>{item.originalFileName || "Uploaded File"}</strong>
+                    <small>
+                      Uploaded: {formatDate(item.uploadedAt)} • {item.totalStudents} records • Mode:{" "}
+                      <span className={`mode-badge ${item.mode}`}>
+                        {item.mode === "replace" || item.mode === "overwrite" ? "Replaced Previous Data" : "Merged Sheet"}
+                      </span>
+                    </small>
+                    {item.sheets && item.sheets.length > 0 && (
+                      <div className="sheet-tabs-list">
+                        Imported Sheet Tabs: {item.sheets.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="remove-sheet-button"
+                    onClick={() => handleRemoveHistoryItem(item.id)}
+                  >
+                    🗑️ Remove Sheet
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-sheets-notice">
+              <span>📭</span> No data sheet currently active. Choose an Excel/CSV file above to upload.
+            </div>
+          )}
         </section>
 
         {/* Statistics */}
@@ -653,6 +793,38 @@ function StudentData() {
                   {selectedStudentModal.remarks || "-"}
                 </strong>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM CLEAR ALL DATA MODAL */}
+      {showClearConfirmModal && (
+        <div className="modal-overlay">
+          <div className="student-modal" style={{ width: "450px", maxWidth: "90vw" }}>
+            <div className="modal-header">
+              <h2>⚠️ Confirm Clear All Data</h2>
+              <button onClick={() => setShowClearConfirmModal(false)}>×</button>
+            </div>
+            <p style={{ color: "#475569", margin: "16px 0", fontSize: "15px", lineHeight: "1.5" }}>
+              Are you sure you want to remove all <strong>{totalStudents}</strong> student records from the master database?
+              This will clear the current list so you can upload a fresh sheet.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "20px" }}>
+              <button
+                className="choose-file-button"
+                style={{ background: "#94a3b8", margin: 0 }}
+                onClick={() => setShowClearConfirmModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="choose-file-button"
+                style={{ background: "#dc2626", margin: 0 }}
+                onClick={handleClearAllData}
+              >
+                Yes, Clear All Data
+              </button>
             </div>
           </div>
         </div>

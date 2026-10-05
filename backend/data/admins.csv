@@ -2,3 +2,8 @@ admin_id,username,password,name,role,domain,created_at
 ADM001,admin,$2b$10$/Bg2Sv8tfTRBWqTovUBQAOl4kikS3a76RwXYzgcxD8vX3HUOm3c1O,Organisation Admin,org_admin,All,2026-10-05T00:00:00.000Z
 ADM002,bw_admin,$2b$10$KcS3myrPvNUo8mtGmIUFBek4gJCu487dbe5v1YO/nXvSs4SXVnT5i,Blockchain And Web 3.0,domain_admin,BW - Blockchain and Web3.0 Lab,2026-10-05T10:52:40.849Z
 ADM003,ad_admin,$2b$10$qva9FfJvA.uX3izz1lGKWehBbkqSh/QsUkz0TLx47i3TEJhE2BIHu,AI and Datascience lab,domain_admin,AI and Data Science,2026-10-05T10:54:31.068Z
+ADM004,cd_admin,$2b$10$9K5HeQ7ExpDbSbl158fYhe1Q8dfMZhiSaYV2pMd/SbVKSzXXXOpM2,Cloud and Devops,domain_admin,Cloud and DevOps,2026-10-05T14:11:14.677Z
+ADM005,cs_admin,$2b$10$Gry7FsojaObhNfK8uU2//Oi0H/qnHFKotJb.MFdnOcfBfDqjNRMNO,CyberSecurity,domain_admin,Cyber Security,2026-10-05T14:11:44.262Z
+ADM006,dma_admin,$2b$10$BvNvEYwi9OqJk8ofPwK/KeXbxNHRNKsZnp3unVN4Jddw9C7ig3T6.,"Design, Manufacturing and Automation Lab",domain_admin,"Design, Manufacturing and Automation Lab",2026-10-05T14:12:54.799Z
+ADM007,ei_admin,$2b$10$46a8s7UbWYn7gGuJioFUvOGEEXClw95a9efptuaRjBOiRPCN11kMO,Embedded Systems and IoT Lab,domain_admin,Embedded Systems and IoT Lab,2026-10-05T14:13:41.334Z
+ADM008,fw_admin,$2b$10$qGRHWZrjI/5JSHHQAuz9yOuLwtnJPdZtBWsUPDPwy2kVci6OGtSgW,Full Stack Web Development,domain_admin,Full Stack Web Development,2026-10-05T14:14:42.255Z

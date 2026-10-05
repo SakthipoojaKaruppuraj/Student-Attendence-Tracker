@@ -57,7 +57,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
+    fileSize: 100 * 1024 * 1024, // 100 MB
   },
 });
 
@@ -75,6 +75,45 @@ const requiredColumns = [
 /* =========================================================
    HELPER
 ========================================================= */
+
+const nameAliases = [
+  "Student Name", "StudentName", "Name", "Student", "Name of Student",
+  "Name of the Student", "Student_Name", "FullName", "Full Name"
+];
+const regAliases = [
+  "Register Number", "RegisterNo", "Reg No", "Reg.No", "Register No",
+  "Registration Number", "Reg_No", "RegNo.", "Register_No", "Registration No"
+];
+const rollAliases = [
+  "Roll Number", "RollNo", "Roll No", "Roll.No", "Roll_Number",
+  "Roll", "RollNo.", "Roll_No"
+];
+const deptAliases = [
+  "Department", "Dept", "Branch", "Degree & Branch", "Course"
+];
+const secAliases = [
+  "Section", "Sec", "Sec."
+];
+const genderAliases = [
+  "Gender", "Sex"
+];
+const kiteEmailAliases = [
+  "KITE Email ID", "KITE Email", "Email ID", "Email", "Official Email",
+  "Mail ID", "KITE Email Address"
+];
+const soiEmailAliases = [
+  "SoI Email ID", "SoI Email", "SOI Email ID", "SOI Email"
+];
+const verticalAliases = [
+  "SoI Lab Vertical", "Lab Vertical", "Vertical", "Domain", "Lab",
+  "School Choosed", "School", "Lab / Vertical"
+];
+const remarkAliases = [
+  "Remarks", "Remark", "Notes", "Note"
+];
+const yearAliases = [
+  "Year", "Student Year", "Academic Year", "Year of Study"
+];
 
 function cleanValue(value) {
   if (value === undefined || value === null) {
@@ -252,6 +291,101 @@ function extractAndSaveAttendanceFromRows(rows) {
   return extractedCount;
 }
 
+function parseSheetRowsSmart(worksheet) {
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+  if (!rawRows || !rawRows.length) return [];
+
+  let headerRowIndex = -1;
+  for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
+    const row = rawRows[i].map((c) =>
+      String(c).toLowerCase().replace(/[^a-z0-9]/g, "")
+    );
+    const matchesHeader = row.some(
+      (cell) =>
+        cell.includes("studentname") ||
+        cell.includes("registernumber") ||
+        cell.includes("rollnumber") ||
+        cell.includes("regno") ||
+        cell.includes("rollno") ||
+        cell === "name" ||
+        cell === "student" ||
+        cell === "department" ||
+        cell === "dept"
+    );
+    if (matchesHeader) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  if (headerRowIndex !== -1) {
+    const headers = rawRows[headerRowIndex].map((h) => String(h).trim());
+    const dataRows = [];
+    for (let i = headerRowIndex + 1; i < rawRows.length; i++) {
+      const rowArr = rawRows[i];
+      if (!rowArr || !rowArr.length) continue;
+      const rowObj = {};
+      headers.forEach((h, colIdx) => {
+        if (h) rowObj[h] = rowArr[colIdx] !== undefined ? String(rowArr[colIdx]).trim() : "";
+      });
+      dataRows.push(rowObj);
+    }
+    return dataRows;
+  }
+
+  // Headerless mode: Auto-detect positional columns by cell pattern
+  const positionalRows = [];
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || !row.length) continue;
+
+    const strCells = row.map((c) => String(c).trim());
+    if (strCells.every((c) => c === "")) continue;
+
+    let s_no = "", student_name = "", register_number = "", roll_number = "", department = "";
+    let section = "", mobile = "", kite_email = "", soi_email = "", soi_lab_vertical = "", remarks = "";
+
+    strCells.forEach((val, idx) => {
+      if (!val) return;
+      if (val.includes("@soi")) {
+        soi_email = val;
+      } else if (val.includes("@kgkite.ac.in") || val.includes("@")) {
+        kite_email = val;
+      } else if (/^\d{10,12}[A-Za-z0-9]+$/i.test(val) || /^7117\d+/i.test(val)) {
+        register_number = val;
+      } else if (/^\d{2}[A-Z]{3,4}\d+$/i.test(val)) {
+        roll_number = val;
+      } else if (/B\.Tech|B\.E|B\.Sc|M\.Tech|M\.E|AI & DS|CSE|ECE|IT|MECH|CSBS|CYS/i.test(val)) {
+        department = val;
+      } else if (/^AD -|^BW -|^CD -|^CS -|^DMA -|^EI -|^FW -|^SOAL$|^SOP$/i.test(val)) {
+        soi_lab_vertical = val;
+      } else if (/^[A-C]$|^Only one section$/i.test(val)) {
+        section = val;
+      } else if (!student_name && /^[A-Za-z\s\.\']{2,40}$/.test(val) && !/present|absent|total|sunday|add on/i.test(val)) {
+        student_name = val;
+      } else if (idx === 0 && /^\d+$/.test(val)) {
+        s_no = val;
+      }
+    });
+
+    if (student_name || register_number || roll_number) {
+      positionalRows.push({
+        "S.No.": s_no,
+        "Student Name": student_name,
+        "Register Number": register_number,
+        "Roll Number": roll_number,
+        "Department": department,
+        "Section": section,
+        "KITE Email ID": kite_email,
+        "SoI Email ID": soi_email,
+        "SoI Lab Vertical": soi_lab_vertical,
+        "Remarks": remarks
+      });
+    }
+  }
+  return positionalRows;
+}
+
 /* =========================================================
    POST /api/students/upload
 ========================================================= */
@@ -271,18 +405,20 @@ router.post(
       const filePath = req.file.path;
 
       /* ---------------------------------------------
-         READ EXCEL / CSV
+         READ EXCEL / CSV (ALL SHEETS WITH SMART PARSING)
       --------------------------------------------- */
 
       const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      let allRows = [];
 
-      const rows = XLSX.utils.sheet_to_json(worksheet, {
-        defval: "",
+      workbook.SheetNames.forEach((sheetName) => {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) return;
+        const rows = parseSheetRowsSmart(worksheet);
+        allRows.push(...rows);
       });
 
-      if (!rows.length) {
+      if (!allRows.length) {
         return res.status(400).json({
           success: false,
           message: "The uploaded file is empty.",
@@ -293,91 +429,64 @@ router.post(
          PARSE & CLEAN STUDENT DATA
       --------------------------------------------- */
 
-      const parsedStudents = rows
+      const parsedStudents = allRows
         .map((row, index) => {
-          const student_name = findColumnValue(row, [
-            "Student Name",
-            "StudentName",
-            "Name",
-            "Student",
-          ]);
-
-          const register_number = findColumnValue(row, [
-            "Register Number",
-            "RegisterNo",
-            "Reg No",
-            "Reg.No",
-            "Register No",
-            "Registration Number",
-          ]);
-
-          const roll_number = findColumnValue(row, [
-            "Roll Number",
-            "RollNo",
-            "Roll No",
-            "Roll.No",
-            "Roll_Number",
-            "Roll",
-          ]);
-
-          const department = findColumnValue(row, [
-            "Department",
-            "Dept",
-            "Branch",
-          ]);
-
-          const section = findColumnValue(row, ["Section", "Sec"]);
-          const gender = findColumnValue(row, ["Gender", "Sex"]);
-          const kite_email = findColumnValue(row, [
-            "KITE Email ID",
-            "KITE Email",
-            "Email ID",
-            "Email",
-          ]);
-          const soi_email = findColumnValue(row, [
-            "SoI Email ID",
-            "SoI Email",
-          ]);
-          const soi_lab_vertical = findColumnValue(row, [
-            "SoI Lab Vertical",
-            "Lab Vertical",
-            "Vertical",
-            "Domain",
-          ]);
-          const remarks = findColumnValue(row, ["Remarks", "Remark"]);
-          const year =
-            findColumnValue(row, ["Year", "Student Year"]) || "3rd Year";
-          const s_no =
-            findColumnValue(row, [
-              "S.No.",
-              "SNo",
-              "S.No",
-              "Sl No",
-              "Serial No",
-            ]) || String(index + 1);
-
-          if (!student_name && !register_number && !roll_number) {
-            return null; // Ignore blank/empty rows
+          const student_name = findColumnValue(row, nameAliases);
+          const register_number = findColumnValue(row, regAliases);
+          const roll_number = findColumnValue(row, rollAliases);
+          const department = findColumnValue(row, deptAliases);
+          const section = findColumnValue(row, secAliases);
+          const gender = findColumnValue(row, genderAliases);
+          const kite_email = findColumnValue(row, kiteEmailAliases);
+          const soi_email = findColumnValue(row, soiEmailAliases);
+          const soi_lab_vertical = findColumnValue(row, verticalAliases);
+          const remarks = findColumnValue(row, remarkAliases);
+          const yearRaw = findColumnValue(row, yearAliases);
+          let year = "3rd Year";
+          if (yearRaw) {
+            if (yearRaw.includes("3") || yearRaw.toLowerCase().includes("third")) {
+              year = "3rd Year";
+            } else {
+              year = yearRaw;
+            }
           }
 
-          const finalRegNo =
-            register_number ||
-            roll_number ||
-            `STU${String(index + 1).padStart(3, "0")}`;
+          const s_no =
+            findColumnValue(row, [
+              "S.No.", "SNo", "S.No", "Sl No", "Serial No", "S. No.", "S No"
+            ]) || String(index + 1);
+
+          // Strict Validation: Ignore empty, summary, or unknown student rows
+          const invalidSummaryRegex =
+            /no\s*\.\s*of|present|absent|total|working\s*days|summary|count|sl\s*no|s\.\s*no|unknown/i;
+
+          if (!student_name || student_name.trim().length < 2) {
+            return null; // A valid student record MUST have a real student name
+          }
+
+          if (
+            invalidSummaryRegex.test(student_name) ||
+            invalidSummaryRegex.test(register_number) ||
+            invalidSummaryRegex.test(roll_number)
+          ) {
+            return null; // Ignore footer/summary rows
+          }
+
+          const finalRegNo = register_number || roll_number || "";
           const finalRollNo = roll_number || register_number || finalRegNo;
 
           return {
             s_no,
-            student_name: student_name || "Unknown Student",
-            register_number: finalRegNo,
-            roll_number: finalRollNo,
+            student_name: student_name.trim(),
+            register_number: finalRegNo.trim(),
+            roll_number: finalRollNo.trim(),
             department: department || "General",
-            section,
-            gender,
-            kite_email,
-            soi_email,
-            soi_lab_vertical,
-            remarks,
+            section: section ? section.trim() : "",
+            gender: gender ? gender.trim() : "",
+            kite_email: kite_email ? kite_email.trim() : "",
+            soi_email: soi_email ? soi_email.trim() : "",
+            soi_lab_vertical: soi_lab_vertical ? soi_lab_vertical.trim() : "",
+            remarks: remarks ? remarks.trim() : "",
             year,
           };
         })
@@ -391,27 +500,47 @@ router.post(
         });
       }
 
-      const dataDir = path.join(
-        __dirname,
-        "../data"
-      );
+      // Deduplicate parsed students within the current uploaded file
+      const uniqueUploadedStudents = [];
+      parsedStudents.forEach((st) => {
+        const regKey = (st.register_number || "").toLowerCase().trim();
+        const rollKey = (st.roll_number || "").toLowerCase().trim();
+        const nameKey = (st.student_name || "").toLowerCase().trim();
 
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, {
-          recursive: true,
+        const existing = uniqueUploadedStudents.find((u) => {
+          const uReg = (u.register_number || "").toLowerCase().trim();
+          const uRoll = (u.roll_number || "").toLowerCase().trim();
+          const uName = (u.student_name || "").toLowerCase().trim();
+          return (
+            (regKey && uReg && regKey === uReg) ||
+            (rollKey && uRoll && rollKey === uRoll) ||
+            (nameKey && uName && nameKey === uName)
+          );
         });
+
+        if (existing) {
+          Object.keys(st).forEach((key) => {
+            if (st[key] && !existing[key]) {
+              existing[key] = st[key];
+            }
+          });
+        } else {
+          uniqueUploadedStudents.push(st);
+        }
+      });
+
+      const dataDir = path.join(__dirname, "../data");
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
       }
 
       /* ---------------------------------------------
          SAVE / MERGE MASTER STUDENT DATA
       --------------------------------------------- */
 
-      const masterFilePath = path.join(
-        dataDir,
-        "master_student_data.json"
-      );
-
+      const masterFilePath = path.join(dataDir, "master_student_data.json");
       let existingStudents = [];
+      let existingHistory = [];
 
       if (fs.existsSync(masterFilePath)) {
         try {
@@ -419,48 +548,59 @@ router.post(
             fs.readFileSync(masterFilePath, "utf8")
           );
           existingStudents = existingData.students || [];
+          existingHistory = existingData.history || [];
         } catch (e) {
           console.error("Error reading existing master_student_data.json:", e);
         }
       }
 
-      // Merge new parsed students into existing master list
-      const mergedStudents = [...existingStudents];
+      // Check upload mode (replace/overwrite vs merge/append)
+      const uploadMode = (req.body.mode || req.query.mode || "replace").toLowerCase();
+      let mergedStudents = [];
 
-      parsedStudents.forEach((newStudent) => {
-        const newReg = (newStudent.register_number || "").toLowerCase().trim();
-        const newRoll = (newStudent.roll_number || "").toLowerCase().trim();
-        const newName = (newStudent.student_name || "").toLowerCase().trim();
+      if (uploadMode === "replace" || uploadMode === "overwrite") {
+        // Clear old data and strictly use new uploaded sheet data
+        mergedStudents = [...uniqueUploadedStudents];
+      } else {
+        // Merge unique uploaded students into existing master list
+        mergedStudents = [...existingStudents];
+        uniqueUploadedStudents.forEach((newStudent) => {
+          const newReg = (newStudent.register_number || "").toLowerCase().trim();
+          const newRoll = (newStudent.roll_number || "").toLowerCase().trim();
+          const newName = (newStudent.student_name || "").toLowerCase().trim();
 
-        const existingIndex = mergedStudents.findIndex((s) => {
-          const sReg = (s.register_number || "").toLowerCase().trim();
-          const sRoll = (s.roll_number || "").toLowerCase().trim();
-          const sName = (s.student_name || "").toLowerCase().trim();
+          const existingIndex = mergedStudents.findIndex((s) => {
+            const sReg = (s.register_number || "").toLowerCase().trim();
+            const sRoll = (s.roll_number || "").toLowerCase().trim();
+            const sName = (s.student_name || "").toLowerCase().trim();
 
-          return (
-            (newReg && sReg && newReg === sReg) ||
-            (newRoll && sRoll && newRoll === sRoll) ||
-            (newName && sName && newName === sName)
-          );
-        });
-
-        if (existingIndex !== -1) {
-          // Update existing student with non-empty fields from new upload
-          const cleanUpdates = {};
-          Object.keys(newStudent).forEach((key) => {
-            if (newStudent[key] !== "" && newStudent[key] !== null && newStudent[key] !== undefined) {
-              cleanUpdates[key] = newStudent[key];
-            }
+            return (
+              (newReg && sReg && newReg === sReg) ||
+              (newRoll && sRoll && newRoll === sRoll) ||
+              (newName && sName && newName === sName)
+            );
           });
-          mergedStudents[existingIndex] = {
-            ...mergedStudents[existingIndex],
-            ...cleanUpdates,
-          };
-        } else {
-          // Append new student
-          mergedStudents.push(newStudent);
-        }
-      });
+
+          if (existingIndex !== -1) {
+            const cleanUpdates = {};
+            Object.keys(newStudent).forEach((key) => {
+              if (
+                newStudent[key] !== "" &&
+                newStudent[key] !== null &&
+                newStudent[key] !== undefined
+              ) {
+                cleanUpdates[key] = newStudent[key];
+              }
+            });
+            mergedStudents[existingIndex] = {
+              ...mergedStudents[existingIndex],
+              ...cleanUpdates,
+            };
+          } else {
+            mergedStudents.push(newStudent);
+          }
+        });
+      }
 
       // Ensure sequential s_no index
       const students = mergedStudents.map((s, idx) => ({
@@ -468,19 +608,29 @@ router.post(
         s_no: String(idx + 1),
       }));
 
+      // History item
+      const newHistoryItem = {
+        id: `file_${Date.now()}`,
+        originalFileName: req.file.originalname,
+        uploadedAt: new Date().toISOString(),
+        totalStudents: uniqueUploadedStudents.length,
+        mode: uploadMode,
+        sheets: workbook.SheetNames || [],
+      };
+
+      const history =
+        uploadMode === "replace" || uploadMode === "overwrite"
+          ? [newHistoryItem]
+          : [newHistoryItem, ...existingHistory];
+
       fs.writeFileSync(
         masterFilePath,
         JSON.stringify(
           {
-            uploadedAt:
-              new Date().toISOString(),
-
-            originalFileName:
-              req.file.originalname,
-
-            totalStudents:
-              students.length,
-
+            uploadedAt: new Date().toISOString(),
+            originalFileName: req.file.originalname,
+            totalStudents: students.length,
+            history,
             students,
           },
           null,
@@ -492,7 +642,7 @@ router.post(
          EXTRACT & MERGE ATTENDANCE DATES FROM FILE
       --------------------------------------------- */
 
-      const extractedAttendanceCount = extractAndSaveAttendanceFromRows(rows);
+      const extractedAttendanceCount = extractAndSaveAttendanceFromRows(allRows);
 
       /* ---------------------------------------------
          RESPONSE
@@ -590,6 +740,7 @@ router.get("/", (req, res) => {
       totalStudents: students.length,
       uploadedAt: data.uploadedAt || null,
       originalFileName: data.originalFileName || null,
+      history: data.history || [],
     });
   } catch (error) {
     console.error(
@@ -599,6 +750,98 @@ router.get("/", (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch students.",
+    });
+  }
+});
+
+/* =========================================================
+   DELETE /api/students (CLEAR ALL DATA)
+========================================================= */
+
+router.delete("/", (req, res) => {
+  try {
+    const masterFilePath = path.join(
+      __dirname,
+      "../data/master_student_data.json"
+    );
+
+    if (fs.existsSync(masterFilePath)) {
+      fs.writeFileSync(
+        masterFilePath,
+        JSON.stringify(
+          {
+            uploadedAt: null,
+            originalFileName: null,
+            totalStudents: 0,
+            history: [],
+            students: [],
+          },
+          null,
+          2
+        )
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "All student data cleared successfully.",
+    });
+  } catch (error) {
+    console.error("Clear students error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to clear student data.",
+    });
+  }
+});
+
+/* =========================================================
+   DELETE /api/students/history/:id
+========================================================= */
+
+router.delete("/history/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const masterFilePath = path.join(
+      __dirname,
+      "../data/master_student_data.json"
+    );
+
+    if (!fs.existsSync(masterFilePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "Student data file not found.",
+      });
+    }
+
+    const data = JSON.parse(fs.readFileSync(masterFilePath, "utf8"));
+    let history = data.history || [];
+    history = history.filter((h) => h.id !== id);
+
+    data.history = history;
+    if (history.length === 0) {
+      data.students = [];
+      data.totalStudents = 0;
+      data.originalFileName = null;
+      data.uploadedAt = null;
+    } else {
+      data.originalFileName = history[0].originalFileName;
+      data.uploadedAt = history[0].uploadedAt;
+    }
+
+    fs.writeFileSync(masterFilePath, JSON.stringify(data, null, 2));
+
+    return res.status(200).json({
+      success: true,
+      message: "Selected file data sheet record removed.",
+      history: data.history,
+      totalStudents: data.students.length,
+    });
+  } catch (error) {
+    console.error("Delete history item error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove sheet record.",
     });
   }
 });
