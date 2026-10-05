@@ -282,21 +282,28 @@ router.post("/", (req, res) => {
       }
     }
 
-    // Remove previous attendance for this date
-    existingRows = existingRows.filter(
-      (row) => row.date !== date
-    );
-
-    // Add new attendance
+    // Merge / append new attendance for this date
     attendance.forEach((student) => {
-      existingRows.push({
+      const existingIndex = existingRows.findIndex(
+        (row) =>
+          row.date === date &&
+          String(row.student_id || "").trim() === String(student.student_id || "").trim()
+      );
+
+      const record = {
         date,
         student_id: student.student_id,
         student_name: student.student_name,
         year: student.year,
         status: student.status,
         remarks: student.remarks || student.reason || "",
-      });
+      };
+
+      if (existingIndex !== -1) {
+        existingRows[existingIndex] = record;
+      } else {
+        existingRows.push(record);
+      }
     });
 
     // CSV header

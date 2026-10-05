@@ -98,6 +98,160 @@ function findColumnValue(row, possibleNames) {
   return "";
 }
 
+const monthMap = {
+  jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+  jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12"
+};
+
+function parseDateHeader(header) {
+  if (!header || typeof header !== "string") return null;
+  const str = header.trim();
+
+  const matchNamed = str.match(/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*(\d{1,2})[\-\/\s]([A-Za-z]{3})(?:[\-\/\s](\d{2,4}))?$/i);
+  if (matchNamed) {
+    const day = String(matchNamed[1]).padStart(2, "0");
+    const month = monthMap[matchNamed[2].toLowerCase()];
+    let year = matchNamed[3];
+    if (!year) {
+      year = "2026";
+    } else if (year.length === 2) {
+      year = "20" + year;
+    }
+    if (month) return `${year}-${month}-${day}`;
+  }
+
+  const matchYMD = str.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
+  if (matchYMD) {
+    return `${matchYMD[1]}-${String(matchYMD[2]).padStart(2, "0")}-${String(matchYMD[3]).padStart(2, "0")}`;
+  }
+
+  const matchDMY = str.match(/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})$/);
+  if (matchDMY) {
+    return `${matchDMY[3]}-${String(matchDMY[2]).padStart(2, "0")}-${String(matchDMY[1]).padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
+function extractAndSaveAttendanceFromRows(rows) {
+  if (!rows || !rows.length) return 0;
+
+  const attendanceFile = path.join(__dirname, "../data/attendance.csv");
+
+  let existingRows = [];
+  if (fs.existsSync(attendanceFile)) {
+    const fileContent = fs.readFileSync(attendanceFile, "utf8");
+    const lines = fileContent.split(/\r?\n/).filter((l) => l.trim() !== "");
+    if (lines.length > 1) {
+      const headers = lines[0].split(",").map((h) => h.trim());
+      existingRows = lines.slice(1).map((line) => {
+        const values = line.split(",").map((v) => v.trim());
+        const row = {};
+        headers.forEach((h, i) => {
+          row[h] = values[i] || "";
+        });
+        return row;
+      });
+    }
+  }
+
+  const firstRow = rows[0];
+  const dateColumns = [];
+  Object.keys(firstRow).forEach((key) => {
+    const parsedDate = parseDateHeader(key);
+    if (parsedDate) {
+      dateColumns.push({ colKey: key, date: parsedDate });
+    }
+  });
+
+  if (!dateColumns.length) {
+    return 0;
+  }
+
+  let extractedCount = 0;
+
+  rows.forEach((row, index) => {
+    const student_name = findColumnValue(row, [
+      "Student Name", "StudentName", "Name", "Student"
+    ]) || "Unknown";
+
+    const register_number = findColumnValue(row, [
+      "Register Number", "RegisterNo", "Reg No", "Reg.No", "Register No"
+    ]);
+
+    const roll_number = findColumnValue(row, [
+      "Roll Number", "RollNo", "Roll No", "Roll.No", "Roll_Number", "Roll"
+    ]);
+
+    const year = findColumnValue(row, ["Year", "Student Year"]) || "3rd Year";
+    const student_id = roll_number || register_number || `STU${String(index + 1).padStart(3, "0")}`;
+
+    dateColumns.forEach(({ colKey, date }) => {
+      const rawVal = cleanValue(row[colKey]);
+      if (!rawVal) return;
+
+      let status = "P";
+      let remarks = "";
+
+      const lowerVal = rawVal.toLowerCase();
+      if (lowerVal === "p" || lowerVal === "present") {
+        status = "P";
+      } else if (lowerVal === "a" || lowerVal === "ab" || lowerVal === "absent") {
+        status = "A";
+      } else if (lowerVal === "od" || lowerVal === "on duty" || lowerVal === "onduty") {
+        status = "OD";
+      } else if (lowerVal === "l" || lowerVal === "late") {
+        status = "L";
+      } else {
+        status = "H";
+        remarks = rawVal;
+      }
+
+      const existingIndex = existingRows.findIndex(
+        (r) => r.date === date && String(r.student_id).trim() === String(student_id).trim()
+      );
+
+      const record = {
+        date,
+        student_id,
+        student_name,
+        year,
+        status,
+        remarks,
+      };
+
+      if (existingIndex !== -1) {
+        existingRows[existingIndex] = record;
+      } else {
+        existingRows.push(record);
+      }
+      extractedCount++;
+    });
+  });
+
+  const csvLines = ["date,student_id,student_name,year,status,remarks"];
+  existingRows.forEach((r) => {
+    csvLines.push(
+      [
+        r.date || "",
+        r.student_id || "",
+        r.student_name || "",
+        r.year || "",
+        r.status || "",
+        r.remarks || "",
+      ].join(",")
+    );
+  });
+
+  const dataDir = path.join(__dirname, "../data");
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  fs.writeFileSync(attendanceFile, csvLines.join("\n"));
+  return extractedCount;
+}
+
 /* =========================================================
    POST /api/students/upload
 ========================================================= */
@@ -237,13 +391,6 @@ router.post(
         });
       }
 
-      const students = parsedStudents;
-
-
-      /* ---------------------------------------------
-         REMOVE OLD UPLOAD
-      --------------------------------------------- */
-
       const dataDir = path.join(
         __dirname,
         "../data"
@@ -256,13 +403,70 @@ router.post(
       }
 
       /* ---------------------------------------------
-         SAVE MASTER STUDENT DATA
+         SAVE / MERGE MASTER STUDENT DATA
       --------------------------------------------- */
 
       const masterFilePath = path.join(
         dataDir,
         "master_student_data.json"
       );
+
+      let existingStudents = [];
+
+      if (fs.existsSync(masterFilePath)) {
+        try {
+          const existingData = JSON.parse(
+            fs.readFileSync(masterFilePath, "utf8")
+          );
+          existingStudents = existingData.students || [];
+        } catch (e) {
+          console.error("Error reading existing master_student_data.json:", e);
+        }
+      }
+
+      // Merge new parsed students into existing master list
+      const mergedStudents = [...existingStudents];
+
+      parsedStudents.forEach((newStudent) => {
+        const newReg = (newStudent.register_number || "").toLowerCase().trim();
+        const newRoll = (newStudent.roll_number || "").toLowerCase().trim();
+        const newName = (newStudent.student_name || "").toLowerCase().trim();
+
+        const existingIndex = mergedStudents.findIndex((s) => {
+          const sReg = (s.register_number || "").toLowerCase().trim();
+          const sRoll = (s.roll_number || "").toLowerCase().trim();
+          const sName = (s.student_name || "").toLowerCase().trim();
+
+          return (
+            (newReg && sReg && newReg === sReg) ||
+            (newRoll && sRoll && newRoll === sRoll) ||
+            (newName && sName && newName === sName)
+          );
+        });
+
+        if (existingIndex !== -1) {
+          // Update existing student with non-empty fields from new upload
+          const cleanUpdates = {};
+          Object.keys(newStudent).forEach((key) => {
+            if (newStudent[key] !== "" && newStudent[key] !== null && newStudent[key] !== undefined) {
+              cleanUpdates[key] = newStudent[key];
+            }
+          });
+          mergedStudents[existingIndex] = {
+            ...mergedStudents[existingIndex],
+            ...cleanUpdates,
+          };
+        } else {
+          // Append new student
+          mergedStudents.push(newStudent);
+        }
+      });
+
+      // Ensure sequential s_no index
+      const students = mergedStudents.map((s, idx) => ({
+        ...s,
+        s_no: String(idx + 1),
+      }));
 
       fs.writeFileSync(
         masterFilePath,
@@ -283,6 +487,12 @@ router.post(
           2
         )
       );
+
+      /* ---------------------------------------------
+         EXTRACT & MERGE ATTENDANCE DATES FROM FILE
+      --------------------------------------------- */
+
+      const extractedAttendanceCount = extractAndSaveAttendanceFromRows(rows);
 
       /* ---------------------------------------------
          RESPONSE
