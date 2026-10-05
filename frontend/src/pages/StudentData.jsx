@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import "../styles/StudentData.css";
@@ -6,11 +7,21 @@ import "../styles/StudentData.css";
 const API_URL = "http://localhost:5001";
 
 function StudentData() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialSearch =
+    searchParams.get("search") ||
+    searchParams.get("register_number") ||
+    "";
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [students, setStudents] = useState([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [uploadedAt, setUploadedAt] = useState(null);
   const [originalFileName, setOriginalFileName] = useState("");
+
+  const [search, setSearch] = useState(initialSearch);
+  const [selectedStudentModal, setSelectedStudentModal] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -27,12 +38,27 @@ function StudentData() {
       );
 
       if (response.data.success) {
-        setStudents(response.data.students || []);
+        const studentList = response.data.students || [];
+        setStudents(studentList);
         setTotalStudents(response.data.totalStudents || 0);
         setUploadedAt(response.data.uploadedAt || null);
         setOriginalFileName(
           response.data.originalFileName || ""
         );
+
+        if (initialSearch && studentList.length > 0) {
+          const q = initialSearch.toLowerCase();
+          const target = studentList.find(
+            (s) =>
+              (s.register_number || "").toLowerCase() === q ||
+              (s.roll_number || "").toLowerCase() === q ||
+              (s.student_name || "").toLowerCase().includes(q)
+          );
+
+          if (target) {
+            setSelectedStudentModal(target);
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to fetch students:", err);
@@ -146,6 +172,18 @@ function StudentData() {
 
     return new Date(date).toLocaleString();
   };
+
+  const filteredStudents = students.filter((student) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      (student.student_name || "").toLowerCase().includes(q) ||
+      (student.register_number || "").toLowerCase().includes(q) ||
+      (student.roll_number || "").toLowerCase().includes(q) ||
+      (student.department || "").toLowerCase().includes(q) ||
+      (student.soi_lab_vertical || "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="admin-layout">
@@ -320,7 +358,7 @@ function StudentData() {
         {/* Student List */}
         <section className="student-list-card">
 
-          <div className="student-list-header">
+          <div className="student-list-header" style={{ flexWrap: "wrap", gap: "15px" }}>
 
             <div>
               <h2>
@@ -336,8 +374,24 @@ function StudentData() {
               </p>
             </div>
 
-            <div className="student-count">
-              {totalStudents} Students
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <input
+                type="text"
+                placeholder="🔍 Search name, reg no, roll no..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  padding: "9px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  width: "280px",
+                  fontSize: "13px",
+                }}
+              />
+
+              <div className="student-count">
+                {filteredStudents.length} / {totalStudents} Students
+              </div>
             </div>
 
           </div>
@@ -346,19 +400,20 @@ function StudentData() {
             <div className="loading-state">
               Loading student data...
             </div>
-          ) : students.length === 0 ? (
+          ) : filteredStudents.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">
                 👥
               </div>
 
               <h3>
-                No Student Data Available
+                No Student Data Found
               </h3>
 
               <p>
-                Upload your student Excel or CSV file
-                to populate the master database.
+                {search
+                  ? "No students match your search criteria."
+                  : "Upload your student Excel or CSV file to populate the master database."}
               </p>
             </div>
           ) : (
@@ -377,11 +432,12 @@ function StudentData() {
                     <th>Gender</th>
                     <th>Year</th>
                     <th>SoI Lab Vertical</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {students.map(
+                  {filteredStudents.map(
                     (student, index) => (
                       <tr
                         key={
@@ -394,8 +450,30 @@ function StudentData() {
                             index + 1}
                         </td>
 
-                        <td className="student-name">
-                          {student.student_name}
+                        <td>
+                          <button
+                            onClick={() => {
+                              const sId =
+                                student.register_number ||
+                                student.roll_number ||
+                                student.student_name;
+                              navigate(
+                                `/admin/students/${encodeURIComponent(sId)}`
+                              );
+                            }}
+                            style={{
+                              border: "none",
+                              background: "none",
+                              color: "#2563eb",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                            title="Click to view dedicated student profile"
+                          >
+                            {student.student_name}
+                          </button>
                         </td>
 
                         <td>
@@ -431,6 +509,32 @@ function StudentData() {
                           {student.soi_lab_vertical ||
                             "-"}
                         </td>
+
+                        <td>
+                          <button
+                            onClick={() => {
+                              const sId =
+                                student.register_number ||
+                                student.roll_number ||
+                                student.student_name;
+                              navigate(
+                                `/admin/students/${encodeURIComponent(sId)}`
+                              );
+                            }}
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: "6px",
+                              border: "1px solid #cbd5e1",
+                              background: "#f8fafc",
+                              color: "#334155",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            View Full Details
+                          </button>
+                        </td>
                       </tr>
                     )
                   )}
@@ -444,6 +548,104 @@ function StudentData() {
         </section>
 
       </main>
+
+      {/* FULL STUDENT MASTER DETAILS MODAL */}
+      {selectedStudentModal && (
+        <div className="modal-overlay">
+          <div className="student-modal" style={{ width: "650px", maxWidth: "90vw" }}>
+            <div className="modal-header">
+              <h2>🎓 Student Master Record</h2>
+              <button onClick={() => setSelectedStudentModal(null)}>×</button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "14px",
+                padding: "10px 0",
+              }}
+            >
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Student Name</small>
+                <strong style={{ display: "block", fontSize: "16px", color: "#1e293b", marginTop: "3px" }}>
+                  {selectedStudentModal.student_name}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Register Number</small>
+                <strong style={{ display: "block", fontSize: "15px", color: "#2563eb", marginTop: "3px" }}>
+                  {selectedStudentModal.register_number}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Roll Number</small>
+                <strong style={{ display: "block", fontSize: "15px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.roll_number}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Department</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.department}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Section</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.section || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Gender</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.gender || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#64748b" }}>Year</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.year || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#eff6ff", padding: "12px", borderRadius: "8px" }}>
+                <small style={{ color: "#1d4ed8" }}>SoI Lab Vertical</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#1e40af", marginTop: "3px" }}>
+                  {selectedStudentModal.soi_lab_vertical || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", gridColumn: "span 2" }}>
+                <small style={{ color: "#64748b" }}>KITE Email ID</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#2563eb", marginTop: "3px" }}>
+                  {selectedStudentModal.kite_email || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", gridColumn: "span 2" }}>
+                <small style={{ color: "#64748b" }}>SoI Email ID</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#2563eb", marginTop: "3px" }}>
+                  {selectedStudentModal.soi_email || "-"}
+                </strong>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", gridColumn: "span 2" }}>
+                <small style={{ color: "#64748b" }}>Remarks</small>
+                <strong style={{ display: "block", fontSize: "14px", color: "#334155", marginTop: "3px" }}>
+                  {selectedStudentModal.remarks || "-"}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

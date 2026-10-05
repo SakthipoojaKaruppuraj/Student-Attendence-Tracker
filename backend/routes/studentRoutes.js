@@ -373,11 +373,61 @@ router.get("/", (req, res) => {
       "Get students error:",
       error
     );
-
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to fetch student data.",
+      message: "Failed to fetch students.",
+    });
+  }
+});
+
+/* =========================================================
+   GET /api/students/:id
+========================================================= */
+
+router.get("/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const masterFilePath = path.join(
+      __dirname,
+      "../data/master_student_data.json"
+    );
+
+    if (!fs.existsSync(masterFilePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "Student data file not found.",
+      });
+    }
+
+    const data = JSON.parse(fs.readFileSync(masterFilePath, "utf8"));
+    const students = data.students || [];
+
+    const query = id.toLowerCase();
+
+    const student = students.find(
+      (s) =>
+        (s.register_number || "").toLowerCase() === query ||
+        (s.roll_number || "").toLowerCase() === query ||
+        (s.s_no || "").toLowerCase() === query ||
+        (s.student_name || "").toLowerCase() === query
+    );
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student record not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      student,
+    });
+  } catch (error) {
+    console.error("Get single student error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch student record.",
     });
   }
 });

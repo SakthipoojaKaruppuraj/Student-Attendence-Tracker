@@ -10,6 +10,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Attendance from "./pages/Attendance";
 import Tasks from "./pages/Tasks";
 import StudentData from "./pages/StudentData";
+import StudentProfile from "./pages/StudentProfile";
 
 function App() {
   return (
@@ -39,6 +40,11 @@ function App() {
         <Route
           path="/admin/students"
           element={<StudentData />}
+        />
+
+        <Route
+          path="/admin/students/:studentId"
+          element={<StudentProfile />}
         />
 
         <Route

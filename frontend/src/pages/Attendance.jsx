@@ -498,7 +498,21 @@ function Attendance() {
                       <td>
                         <button
                           className="student-name"
-                          onClick={() => setSelectedStudent(student)}
+                          title="Click to view complete student profile"
+                          onClick={() => {
+                            const studentQuery =
+                              student.register_number ||
+                              student.roll_number ||
+                              student.student_id ||
+                              student.name ||
+                              "";
+
+                            navigate(
+                              `/admin/students/${encodeURIComponent(
+                                studentQuery
+                              )}`
+                            );
+                          }}
                         >
                           {name}
                         </button>
