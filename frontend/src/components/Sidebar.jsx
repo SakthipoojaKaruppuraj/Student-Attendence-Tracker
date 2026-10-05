@@ -44,6 +44,17 @@ function Sidebar() {
           📅 Attendance
         </Link>
 
+        <Link
+          to="/admin/students"
+          className={`sidebar-link ${
+            location.pathname === "/admin/students"
+              ? "active"
+              : ""
+          }`}
+>
+  👥 Student Data
+</Link>
+
         {/* Everyday Tasks */}
         <Link
           to="/admin/tasks"

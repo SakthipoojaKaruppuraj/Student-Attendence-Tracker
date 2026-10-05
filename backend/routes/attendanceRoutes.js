@@ -20,6 +20,34 @@ const attendanceFile = path.join(
 // --------------------------------------------------
 
 router.get("/students", (req, res) => {
+  const masterFilePath = path.join(__dirname, "../data/master_student_data.json");
+
+  if (fs.existsSync(masterFilePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(masterFilePath, "utf8"));
+
+      const students = (data.students || []).map((student) => ({
+        student_id:
+          student.roll_number ||
+          student.register_number ||
+          student.s_no,
+
+        name: student.student_name,
+
+        year: student.year || "3rd Year",
+
+        domain:
+          student.soi_lab_vertical ||
+          student.department ||
+          "",
+      }));
+
+      return res.json(students);
+    } catch (err) {
+      console.error("Error reading master_student_data.json:", err);
+    }
+  }
+
   if (!fs.existsSync(studentsFile)) {
     return res.json([]);
   }

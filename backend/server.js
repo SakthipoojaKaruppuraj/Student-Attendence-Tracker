@@ -6,6 +6,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 const adminRoutes = require("./routes/adminRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const studentRoutes = require("./routes/studentRoutes");
 
 
 const app = express();
@@ -26,6 +27,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 app.use("/api/tasks", taskRoutes);
+app.use("/api/students", studentRoutes);
 
 app.get("/", (req, res) => {
   res.json({
