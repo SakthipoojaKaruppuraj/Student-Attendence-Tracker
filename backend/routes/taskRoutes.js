@@ -262,6 +262,7 @@ router.post("/", async (req, res) => {
       domain,
       year,
       due_date,
+      allowed_proof_types,
       created_by,
     } = req.body;
 
@@ -285,6 +286,10 @@ router.post("/", async (req, res) => {
 
     const createdAt = new Date().toISOString();
 
+    const allowedProofTypesStr = Array.isArray(allowed_proof_types)
+      ? allowed_proof_types.join(",")
+      : (allowed_proof_types || "github_url,image,video,pdf");
+
     const newTask = {
       task_id: taskId,
       title: title.trim(),
@@ -292,12 +297,13 @@ router.post("/", async (req, res) => {
       domain: domain.trim(),
       year: year.trim(),
       due_date,
+      allowed_proof_types: allowedProofTypesStr,
       created_by: created_by || "admin",
       created_at: createdAt,
     };
 
     const tasksHeader =
-      "task_id,title,description,domain,year,due_date,created_by,created_at";
+      "task_id,title,description,domain,year,due_date,allowed_proof_types,created_by,created_at";
 
     appendToCsv(tasksFilePath, tasksHeader, [
       newTask.task_id,
@@ -306,10 +312,10 @@ router.post("/", async (req, res) => {
       newTask.domain,
       newTask.year,
       newTask.due_date,
+      newTask.allowed_proof_types,
       newTask.created_by,
       newTask.created_at,
     ]);
-
 
     res.status(201).json({
       success: true,
@@ -352,7 +358,7 @@ router.delete("/:taskId", async (req, res) => {
     );
 
     const header =
-      "task_id,title,description,domain,year,due_date,created_by,created_at\n";
+      "task_id,title,description,domain,year,due_date,allowed_proof_types,created_by,created_at\n";
 
     const csvData =
       header +
@@ -365,6 +371,7 @@ router.delete("/:taskId", async (req, res) => {
             task.domain,
             task.year,
             task.due_date,
+            task.allowed_proof_types || "github_url,image,video,pdf",
             task.created_by,
             task.created_at,
           ]

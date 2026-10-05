@@ -1,1 +1,1 @@
-task_id,title,description,domain,year,due_date,created_by,created_at
+task_id,title,description,domain,year,due_date,allowed_proof_types,created_by,created_at

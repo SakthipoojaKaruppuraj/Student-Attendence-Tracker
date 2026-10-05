@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Sidebar from "../components/Sidebar";
 import "../styles/Tasks.css";
 
 const API_URL = "http://localhost:5001/api/tasks";
@@ -18,7 +19,29 @@ function Tasks() {
     domain: "",
     year: "",
     due_date: "",
+    allowed_proof_types: ["github_url", "image", "video", "pdf"],
   });
+
+  const handlePowToggle = (powType) => {
+    setFormData((prev) => {
+      const current = prev.allowed_proof_types || [];
+      if (current.includes(powType)) {
+        if (current.length === 1) {
+          alert("At least one Proof of Work mode must be enabled.");
+          return prev;
+        }
+        return {
+          ...prev,
+          allowed_proof_types: current.filter((t) => t !== powType),
+        };
+      } else {
+        return {
+          ...prev,
+          allowed_proof_types: [...current, powType],
+        };
+      }
+    });
+  };
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -93,6 +116,7 @@ function Tasks() {
           domain: "",
           year: "",
           due_date: "",
+          allowed_proof_types: ["github_url", "image", "video", "pdf"],
         });
 
         setShowForm(false);
@@ -204,7 +228,10 @@ function Tasks() {
   // -----------------------------------------
 
   return (
-    <div className="tasks-page">
+    <div className="dashboard-layout">
+      <Sidebar />
+
+      <main className="tasks-page">
 
       {/* HEADER */}
 
@@ -419,6 +446,70 @@ function Tasks() {
 
             </div>
 
+            {/* PROOF OF WORK (POW) SELECTION */}
+            <div className="form-group full-width pow-selection-container">
+              <label className="pow-section-title">
+                ⚡ Allowed Proof of Work (POW) Modes *
+              </label>
+              <p className="pow-help-text">
+                Toggle which submission formats students are permitted to upload for this task:
+              </p>
+
+              <div className="pow-options-grid">
+                <label className={`pow-option-card ${formData.allowed_proof_types?.includes("github_url") ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.allowed_proof_types?.includes("github_url")}
+                    onChange={() => handlePowToggle("github_url")}
+                  />
+                  <span className="pow-icon">🔗</span>
+                  <div className="pow-label-group">
+                    <strong>GitHub / Code Link</strong>
+                    <span>Repository or Live Link</span>
+                  </div>
+                </label>
+
+                <label className={`pow-option-card ${formData.allowed_proof_types?.includes("image") ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.allowed_proof_types?.includes("image")}
+                    onChange={() => handlePowToggle("image")}
+                  />
+                  <span className="pow-icon">🖼️</span>
+                  <div className="pow-label-group">
+                    <strong>Image / Screenshot</strong>
+                    <span>PNG, JPG, WEBP</span>
+                  </div>
+                </label>
+
+                <label className={`pow-option-card ${formData.allowed_proof_types?.includes("video") ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.allowed_proof_types?.includes("video")}
+                    onChange={() => handlePowToggle("video")}
+                  />
+                  <span className="pow-icon">🎥</span>
+                  <div className="pow-label-group">
+                    <strong>Demo Video</strong>
+                    <span>MP4, WEBM recordings</span>
+                  </div>
+                </label>
+
+                <label className={`pow-option-card ${formData.allowed_proof_types?.includes("pdf") ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.allowed_proof_types?.includes("pdf")}
+                    onChange={() => handlePowToggle("pdf")}
+                  />
+                  <span className="pow-icon">📄</span>
+                  <div className="pow-label-group">
+                    <strong>PDF Document</strong>
+                    <span>Reports & Documents</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div className="form-actions">
 
               <button
@@ -624,6 +715,26 @@ function Tasks() {
 
                     </div>
 
+                    <div className="task-pow-badges">
+                      <span className="pow-badge-title">Allowed POW Modes:</span>
+                      {(task.allowed_proof_types || "github_url,image,video,pdf").split(",").map((type) => {
+                        const cleanType = type.trim();
+                        const powMeta = {
+                          github_url: { label: "GitHub URL", icon: "🔗", cls: "pow-github" },
+                          image: { label: "Image", icon: "🖼️", cls: "pow-image" },
+                          video: { label: "Demo Video", icon: "🎥", cls: "pow-video" },
+                          pdf: { label: "PDF Document", icon: "📄", cls: "pow-pdf" },
+                        };
+                        const item = powMeta[cleanType] || { label: cleanType, icon: "📌", cls: "pow-default" };
+
+                        return (
+                          <span key={cleanType} className={`pow-badge ${item.cls}`}>
+                            {item.icon} {item.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+
                   </div>
 
                   <div className="task-actions">
@@ -662,6 +773,7 @@ function Tasks() {
 
       </div>
 
+      </main>
     </div>
   );
 }
