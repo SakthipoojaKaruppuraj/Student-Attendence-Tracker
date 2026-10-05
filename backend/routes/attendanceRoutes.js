@@ -72,6 +72,135 @@ router.get("/students", (req, res) => {
 });
 
 // --------------------------------------------------
+// GET MASTER ATTENDANCE REPORT
+// --------------------------------------------------
+
+router.get("/master-report", (req, res) => {
+  try {
+    const masterFilePath = path.join(
+      __dirname,
+      "../data/master_student_data.json"
+    );
+
+    let masterStudents = [];
+
+    if (fs.existsSync(masterFilePath)) {
+      const data = JSON.parse(
+        fs.readFileSync(masterFilePath, "utf8")
+      );
+      masterStudents = data.students || [];
+    } else if (fs.existsSync(studentsFile)) {
+      const fileContent = fs.readFileSync(studentsFile, "utf8");
+      const lines = fileContent.split(/\r?\n/).filter((l) => l.trim() !== "");
+      if (lines.length > 1) {
+        const headers = lines[0].split(",").map((h) => h.trim());
+        masterStudents = lines.slice(1).map((line, idx) => {
+          const values = line.split(",").map((v) => v.trim());
+          return {
+            s_no: String(idx + 1),
+            student_name: values[1] || "",
+            register_number: values[0] || "",
+            roll_number: values[0] || "",
+            department: values[3] || "",
+            year: values[2] || "3rd Year",
+          };
+        });
+      }
+    }
+
+    let attendanceRecords = [];
+
+    if (fs.existsSync(attendanceFile)) {
+      const fileContent = fs.readFileSync(attendanceFile, "utf8");
+      const lines = fileContent.split(/\r?\n/).filter((l) => l.trim() !== "");
+      if (lines.length > 1) {
+        const headers = lines[0].split(",").map((h) => h.trim());
+        attendanceRecords = lines.slice(1).map((line) => {
+          const values = line.split(",").map((v) => v.trim());
+          const row = {};
+          headers.forEach((h, i) => {
+            row[h] = values[i] || "";
+          });
+          return row;
+        });
+      }
+    }
+
+    // Unique sorted dates
+    const dates = [
+      ...new Set(
+        attendanceRecords.map((r) => r.date).filter(Boolean)
+      ),
+    ].sort();
+
+    // Map student_id -> { date -> { status, remarks } }
+    const attendanceMap = {};
+    attendanceRecords.forEach((r) => {
+      if (!attendanceMap[r.student_id]) {
+        attendanceMap[r.student_id] = {};
+      }
+      attendanceMap[r.student_id][r.date] = r;
+    });
+
+    const reportRows = masterStudents.map((student, index) => {
+      const studentId =
+        student.roll_number ||
+        student.register_number ||
+        student.s_no;
+
+      const rowData = {
+        s_no: student.s_no || String(index + 1),
+        student_name: student.student_name || "",
+        register_number: student.register_number || "",
+        roll_number: student.roll_number || "",
+        department: student.department || "",
+        section: student.section || "",
+        gender: student.gender || "",
+        year: student.year || "",
+        soi_lab_vertical: student.soi_lab_vertical || "",
+        kite_email: student.kite_email || "",
+        soi_email: student.soi_email || "",
+        remarks: student.remarks || "",
+      };
+
+      dates.forEach((d) => {
+        const record =
+          attendanceMap[studentId]?.[d] ||
+          attendanceMap[student.register_number]?.[d] ||
+          attendanceMap[student.roll_number]?.[d];
+
+        let statusText = "-";
+        if (record) {
+          if (record.status === "H" || (record.status && record.status.startsWith("H:"))) {
+            const reason = record.remarks || record.reason || (record.status.includes(":") ? record.status.split(":")[1].trim() : "");
+            statusText = reason ? `H (${reason})` : "Holiday";
+          } else {
+            statusText = record.status;
+          }
+        }
+
+        rowData[d] = statusText;
+      });
+
+      return rowData;
+    });
+
+    return res.json({
+      success: true,
+      dates,
+      students: reportRows,
+    });
+  } catch (error) {
+    console.error("Master report error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to generate master attendance report.",
+    });
+  }
+});
+
+// --------------------------------------------------
 // GET ATTENDANCE FOR A DATE
 // --------------------------------------------------
 
@@ -137,10 +266,10 @@ router.post("/", (req, res) => {
         .filter((line) => line.trim() !== "");
 
       if (lines.length > 1) {
-        const headers = lines[0].split(",").map(h => h.trim());
+        const headers = lines[0].split(",").map((h) => h.trim());
 
         existingRows = lines.slice(1).map((line) => {
-          const values = line.split(",").map(v => v.trim());
+          const values = line.split(",").map((v) => v.trim());
 
           const row = {};
 
@@ -166,12 +295,13 @@ router.post("/", (req, res) => {
         student_name: student.student_name,
         year: student.year,
         status: student.status,
+        remarks: student.remarks || student.reason || "",
       });
     });
 
     // CSV header
     const csvLines = [
-      "date,student_id,student_name,year,status",
+      "date,student_id,student_name,year,status,remarks",
     ];
 
     existingRows.forEach((row) => {
@@ -182,6 +312,7 @@ router.post("/", (req, res) => {
           row.student_name || "",
           row.year || "",
           row.status || "",
+          row.remarks || "",
         ].join(",")
       );
     });
