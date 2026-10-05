@@ -1,0 +1,14 @@
+{
+  "name": "tracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "start": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend dev\"",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

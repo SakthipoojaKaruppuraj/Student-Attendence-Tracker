@@ -1,0 +1,242 @@
+.dashboard-layout {
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.attendance-page {
+  margin-left: 250px;
+  padding: 30px;
+  min-height: 100vh;
+}
+
+.attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.attendance-header h1 {
+  font-size: 28px;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.attendance-header p {
+  color: #64748b;
+}
+
+.date-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-container label {
+  font-weight: 600;
+  color: #334155;
+}
+
+.date-container input {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+}
+
+/* YEAR TABS */
+
+.year-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.year-tab {
+  padding: 12px 25px;
+  border: none;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+}
+
+.year-tab.active {
+  background: #2563eb;
+  color: white;
+}
+
+/* TOOLBAR */
+
+.attendance-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.attendance-toolbar input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  outline: none;
+}
+
+.attendance-toolbar button {
+  border: none;
+  padding: 12px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.present-all-btn {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.save-btn {
+  background: #2563eb;
+  color: white;
+}
+
+.download-btn {
+  background: #16a34a;
+  color: white;
+}
+
+/* TABLE */
+
+.attendance-table-container {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f8fafc;
+}
+
+th,
+td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  color: #475569;
+  font-size: 14px;
+}
+
+td {
+  color: #334155;
+}
+
+/* STUDENT NAME */
+
+.student-name {
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* STATUS */
+
+.status-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.status {
+  width: 40px;
+  height: 35px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.status.present.selected {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.status.absent.selected {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.status.od.selected {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+/* MODAL */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.student-modal {
+  width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  color: #1e293b;
+}
+
+.modal-header button {
+  border: none;
+  background: none;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-row span {
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.detail-row strong {
+  color: #1e293b;
+}
