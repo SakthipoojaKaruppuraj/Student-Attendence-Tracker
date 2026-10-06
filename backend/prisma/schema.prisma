@@ -1,0 +1,105 @@
+// Prisma Schema for Student Attendance Tracker
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  adminId   String   @unique
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("domain_admin") // "org_admin" or "domain_admin"
+  domain    String   @default("All")
+  createdAt DateTime @default(now())
+
+  @@map("admins")
+}
+
+model Student {
+  id              String   @id @default(uuid())
+  sNo             String?
+  studentName     String
+  registerNumber  String?
+  rollNumber      String   @unique // Roll number e.g. 24UAD105
+  department      String
+  section         String?
+  gender          String?
+  kiteEmail       String?
+  soiEmail        String?
+  soiLabVertical  String?
+  remarks         String?
+  year            String   // e.g. "1st Year", "2nd Year", "3rd Year", "4th Year"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  attendanceRecords AttendanceRecord[]
+  taskSubmissions   TaskSubmission[]
+
+  @@map("students")
+}
+
+model AttendanceRecord {
+  id          String   @id @default(uuid())
+  date        String   // YYYY-MM-DD
+  studentId   String   // rollNumber reference
+  student     Student  @relation(fields: [studentId], references: [rollNumber], onDelete: Cascade)
+  studentName String
+  year        String
+  status      String   // "P", "A", "OD", "ML"
+  remarks     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([date, studentId])
+  @@map("attendance_records")
+}
+
+model Task {
+  id                String   @id @default(uuid())
+  taskId            String   @unique
+  title             String
+  description       String
+  domain            String   // domain/vertical or "All"
+  year              String   // "1st Year", "2nd Year", etc. or "All"
+  dueDate           String?
+  allowedProofTypes String?  // comma-separated string e.g. "github,image,pdf"
+  createdBy         String   // Admin adminId
+  createdAt         DateTime @default(now())
+
+  submissions       TaskSubmission[]
+
+  @@map("tasks")
+}
+
+model TaskSubmission {
+  id            String   @id @default(uuid())
+  submissionId  String   @unique
+  taskId        String
+  task          Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [rollNumber], onDelete: Cascade)
+  githubUrl     String?
+  proofFiles    String?  // JSON string or comma-separated file paths
+  comment       String?
+  submittedAt   DateTime @default(now())
+  status        String   @default("Pending") // "Pending", "Approved", "Rejected"
+  adminFeedback String?
+
+  @@map("task_submissions")
+}
+
+model MasterDataUploadHistory {
+  id               String   @id @default(uuid())
+  originalFileName String
+  uploadedAt       DateTime @default(now())
+  totalStudents    Int
+  mode             String   // "replace" or "append"
+  sheets           String?  // JSON formatted array of sheet names
+
+  @@map("master_data_upload_history")
+}

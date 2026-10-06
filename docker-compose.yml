@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. Database Service (PostgreSQL)
+  database:
+    image: postgres:16-alpine
+    container_name: tracker_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tracker_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tracker_network
+
+  # 2. Backend API Service (Node.js Express + Prisma)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tracker_backend
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+      DATABASE_URL: "postgresql://postgres:postgres@database:5432/tracker_db?schema=public"
+      JWT_SECRET: "your_super_secret_jwt_key"
+    depends_on:
+      - database
+    networks:
+      - tracker_network
+
+  # 3. Frontend Web Service (React + Vite + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tracker_frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - tracker_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tracker_network:
+    driver: bridge
