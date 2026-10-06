@@ -25,10 +25,17 @@ function AdminLogin() {
     try {
       setLoading(true);
 
-      const response = await axios.post("http://localhost:5001/api/admin/login", {
-        username,
-        password,
-      });
+      const apiUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/admin/login` : "/api/admin/login";
+      let response;
+      try {
+        response = await axios.post(apiUrl, { username, password });
+      } catch (err) {
+        if (!import.meta.env.VITE_API_URL && err.code === "ERR_NETWORK") {
+          response = await axios.post("http://localhost:5001/api/admin/login", { username, password });
+        } else {
+          throw err;
+        }
+      }
 
       // Store JWT token
       localStorage.setItem("adminToken", response.data.token);

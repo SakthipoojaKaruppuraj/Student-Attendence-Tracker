@@ -1,57 +1,9 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const csv = require("csv-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const prisma = require("../config/db");
 
 const router = express.Router();
-
-const adminsFilePath = path.join(
-  __dirname,
-  "../data/admins.csv"
-);
-
-function escapeCsv(value) {
-  if (value === undefined || value === null) return "";
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
-
-function readAdmins() {
-  return new Promise((resolve, reject) => {
-    if (!fs.existsSync(adminsFilePath)) {
-      return resolve([]);
-    }
-    const results = [];
-    fs.createReadStream(adminsFilePath)
-      .pipe(csv())
-      .on("data", (row) => results.push(row))
-      .on("end", () => resolve(results))
-      .on("error", (err) => reject(err));
-  });
-}
-
-function saveAdmins(admins) {
-  const header = "admin_id,username,password,name,role,domain,created_at\n";
-  const lines = admins.map((a) =>
-    [
-      a.admin_id || "",
-      a.username || "",
-      a.password || "",
-      a.name || "",
-      a.role || "domain_admin",
-      a.domain || "All",
-      a.created_at || new Date().toISOString(),
-    ]
-      .map(escapeCsv)
-      .join(",")
-  );
-  fs.writeFileSync(adminsFilePath, header + lines.join("\n") + (lines.length ? "\n" : ""), "utf8");
-}
 
 // --------------------------------------------------
 // ADMIN LOGIN
@@ -68,8 +20,8 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const admins = await readAdmins();
-
+    // Find admin in PostgreSQL using Prisma
+    const admins = await prisma.admin.findMany();
     const admin = admins.find(
       (item) =>
         item.username &&
@@ -98,7 +50,7 @@ router.post("/login", async (req, res) => {
     const secretKey = process.env.JWT_SECRET || "your_super_secret_jwt_key";
     const token = jwt.sign(
       {
-        admin_id: admin.admin_id,
+        admin_id: admin.adminId,
         username: admin.username,
         role: admin.role || "domain_admin",
         domain: admin.domain || "All",
@@ -114,7 +66,7 @@ router.post("/login", async (req, res) => {
       message: "Login successful",
       token,
       admin: {
-        admin_id: admin.admin_id || "ADM001",
+        admin_id: admin.adminId,
         username: admin.username,
         name: admin.name || admin.username,
         role: admin.role || "org_admin",
@@ -136,15 +88,17 @@ router.post("/login", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const admins = await readAdmins();
+    const admins = await prisma.admin.findMany({
+      orderBy: { createdAt: "asc" },
+    });
 
     const safeAdmins = admins.map((a) => ({
-      admin_id: a.admin_id || "",
+      admin_id: a.adminId || "",
       username: a.username || "",
       name: a.name || a.username || "",
       role: a.role || "domain_admin",
       domain: a.domain || "All",
-      created_at: a.created_at || "",
+      created_at: a.createdAt ? a.createdAt.toISOString() : "",
     }));
 
     return res.json({
@@ -175,7 +129,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const admins = await readAdmins();
+    const admins = await prisma.admin.findMany();
 
     const existing = admins.find(
       (a) => a.username.trim().toLowerCase() === username.trim().toLowerCase()
@@ -192,7 +146,7 @@ router.post("/", async (req, res) => {
 
     let maxNum = 0;
     admins.forEach((a) => {
-      const match = String(a.admin_id || "").match(/ADM(\d+)/);
+      const match = String(a.adminId || "").match(/ADM(\d+)/);
       if (match) {
         maxNum = Math.max(maxNum, parseInt(match[1], 10));
       }
@@ -200,29 +154,27 @@ router.post("/", async (req, res) => {
 
     const newAdminId = `ADM${String(maxNum + 1).padStart(3, "0")}`;
 
-    const newAdmin = {
-      admin_id: newAdminId,
-      username: username.trim(),
-      password: hashedPassword,
-      name: name ? name.trim() : username.trim(),
-      role: role || "domain_admin",
-      domain: domain.trim(),
-      created_at: new Date().toISOString(),
-    };
-
-    admins.push(newAdmin);
-    saveAdmins(admins);
+    const newAdmin = await prisma.admin.create({
+      data: {
+        adminId: newAdminId,
+        username: username.trim(),
+        password: hashedPassword,
+        name: name ? name.trim() : username.trim(),
+        role: role || "domain_admin",
+        domain: domain.trim(),
+      },
+    });
 
     return res.status(201).json({
       success: true,
       message: "Admin account created successfully.",
       admin: {
-        admin_id: newAdmin.admin_id,
+        admin_id: newAdmin.adminId,
         username: newAdmin.username,
         name: newAdmin.name,
         role: newAdmin.role,
         domain: newAdmin.domain,
-        created_at: newAdmin.created_at,
+        created_at: newAdmin.createdAt.toISOString(),
       },
     });
   } catch (error) {
@@ -242,9 +194,10 @@ router.delete("/:adminId", async (req, res) => {
   try {
     const { adminId } = req.params;
 
-    let admins = await readAdmins();
+    const target = await prisma.admin.findUnique({
+      where: { adminId },
+    });
 
-    const target = admins.find((a) => a.admin_id === adminId);
     if (!target) {
       return res.status(404).json({
         success: false,
@@ -259,8 +212,9 @@ router.delete("/:adminId", async (req, res) => {
       });
     }
 
-    admins = admins.filter((a) => a.admin_id !== adminId);
-    saveAdmins(admins);
+    await prisma.admin.delete({
+      where: { adminId },
+    });
 
     return res.json({
       success: true,
