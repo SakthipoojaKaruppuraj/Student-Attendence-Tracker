@@ -258,6 +258,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       await prisma.student.deleteMany();
     }
 
+    const bcrypt = require("bcryptjs");
+    const defaultHashedPassword = await bcrypt.hash("Kitesoi@123", 10);
+
     for (const st of parsedStudents) {
       if (!st.roll_number) continue;
 
@@ -288,6 +291,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
           soiLabVertical: st.soi_lab_vertical || null,
           remarks: st.remarks || null,
           year: st.year,
+          password: defaultHashedPassword,
+          isDefaultPassword: true,
         },
       });
     }

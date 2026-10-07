@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "../styles/AdminLogin.css";
 
 function AdminLogin() {
@@ -68,7 +68,47 @@ function AdminLogin() {
   return (
     <div className="login-container">
 
-      <div className="login-card">
+      <div className="login-card" style={{ maxWidth: "440px" }}>
+
+        {/* Role Toggle Header */}
+        <div style={{ display: "flex", gap: "10px", marginBottom: "24px", background: "rgba(255, 255, 255, 0.05)", padding: "4px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <Link
+            to="/student/login"
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "8px",
+              border: "none",
+              background: "transparent",
+              color: "rgba(255,255,255,0.6)",
+              fontWeight: 600,
+              textDecoration: "none",
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
+            }}
+          >
+            🎓 Student Portal
+          </Link>
+          <button
+            type="button"
+            className="role-tab active"
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "8px",
+              border: "none",
+              background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "default",
+            }}
+          >
+            🔑 Admin Login
+          </button>
+        </div>
 
         <div className="login-header">
           <h1>Admin Login</h1>

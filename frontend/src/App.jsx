@@ -12,6 +12,8 @@ import Tasks from "./pages/Tasks";
 import StudentData from "./pages/StudentData";
 import StudentProfile from "./pages/StudentProfile";
 import AdminManagement from "./pages/AdminManagement";
+import StudentLogin from "./pages/StudentLogin";
+import StudentDashboard from "./pages/StudentDashboard";
 
 function App() {
   return (
@@ -21,7 +23,7 @@ function App() {
           path="/"
           element={
             <Navigate
-              to="/admin/login"
+              to="/student/login"
               replace
             />
           }
@@ -30,6 +32,16 @@ function App() {
         <Route
           path="/admin/login"
           element={<AdminLogin />}
+        />
+
+        <Route
+          path="/student/login"
+          element={<StudentLogin />}
+        />
+
+        <Route
+          path="/student/dashboard"
+          element={<StudentDashboard />}
         />
 
         <Route

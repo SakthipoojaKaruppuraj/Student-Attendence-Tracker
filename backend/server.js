@@ -7,7 +7,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const studentRoutes = require("./routes/studentRoutes");
-
+const studentAuthRoutes = require("./routes/studentAuthRoutes");
 
 const app = express();
 
@@ -18,6 +18,9 @@ app.use(express.urlencoded({ limit: "100mb", extended: true }));
 // Admin
 app.use("/api/admin", adminRoutes);
 app.use("/api/admins", adminRoutes);
+
+// Student Auth & Progress
+app.use("/api/student-auth", studentAuthRoutes);
 
 // Attendance
 app.use("/api/attendance", attendanceRoutes);

@@ -22,21 +22,23 @@ model Admin {
 }
 
 model Student {
-  id              String   @id @default(uuid())
-  sNo             String?
-  studentName     String
-  registerNumber  String?
-  rollNumber      String   @unique // Roll number e.g. 24UAD105
-  department      String
-  section         String?
-  gender          String?
-  kiteEmail       String?
-  soiEmail        String?
-  soiLabVertical  String?
-  remarks         String?
-  year            String   // e.g. "1st Year", "2nd Year", "3rd Year", "4th Year"
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(uuid())
+  sNo               String?
+  studentName       String
+  registerNumber    String?
+  rollNumber        String   @unique // Roll number e.g. 24UAD105
+  password          String?  // Hashed password
+  isDefaultPassword Boolean  @default(true)
+  department        String
+  section           String?
+  gender            String?
+  kiteEmail         String?
+  soiEmail          String?
+  soiLabVertical    String?
+  remarks           String?
+  year              String   // e.g. "1st Year", "2nd Year", "3rd Year", "4th Year"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   attendanceRecords AttendanceRecord[]
   taskSubmissions   TaskSubmission[]
