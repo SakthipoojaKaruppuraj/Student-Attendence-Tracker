@@ -271,13 +271,22 @@ router.get("/me/progress", async (req, res) => {
       const tDomain = (t.domain || "").toLowerCase().trim();
       const tYear = (t.year || "").toLowerCase().trim();
 
+      const cleanStudentDomain = studentDomain.replace(/[^a-z0-9]/g, " ");
+      const cleanTDomain = tDomain.replace(/[^a-z0-9]/g, " ");
+
+      const studentWords = cleanStudentDomain.split(/\s+/).filter((w) => w.length > 1);
+      const tWords = cleanTDomain.split(/\s+/).filter((w) => w.length > 1);
+
+      const hasWordOverlap = tWords.some((tw) => studentWords.includes(tw));
+
       const domainMatches =
         tDomain === "all" ||
         !tDomain ||
         tDomain.includes(studentDomain) ||
         studentDomain.includes(tDomain) ||
         tDomain.includes(studentDept) ||
-        studentDept.includes(tDomain);
+        studentDept.includes(tDomain) ||
+        hasWordOverlap;
 
       const yearMatches =
         tYear === "all" ||

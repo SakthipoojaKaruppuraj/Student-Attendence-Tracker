@@ -41,7 +41,7 @@ app.use(
   express.static(
     require("path").join(
       __dirname,
-      "uploads"
+      "../database/uploads"
     )
   )
 );

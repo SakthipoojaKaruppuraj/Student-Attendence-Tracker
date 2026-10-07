@@ -7,7 +7,7 @@ const prisma = require("../config/db");
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, "../uploads/student-data");
+const uploadDir = path.join(__dirname, "../../database/uploads/student-data");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
