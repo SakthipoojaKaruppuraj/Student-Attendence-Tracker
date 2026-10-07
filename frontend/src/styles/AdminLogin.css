@@ -1,3 +1,5 @@
+/* Login Page Styles - Glassmorphism & Background Image */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -9,95 +11,157 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f4f7fb;
-  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(30, 41, 59, 0.75)),
+              url("../assets/bgimage.png") no-repeat center center / cover;
+  font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif;
+  padding: 20px;
 }
 
 .login-card {
-  width: 400px;
-  background: white;
-  padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  padding: 36px 32px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.role-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  background: #f1f5f9;
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+}
+
+.role-tab-btn {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.925rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.role-tab-btn.active {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+  cursor: default;
+}
+
+.role-tab-btn.inactive {
+  background: transparent;
+  color: #475569 !important;
+}
+
+.role-tab-btn.inactive:hover {
+  background: #ffffff;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .login-header h1 {
-  color: #1e3a8a;
-  font-size: 28px;
-  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
 }
 
 .login-header p {
   color: #64748b;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #334155;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .form-group input {
   width: 100%;
-  padding: 13px;
+  padding: 12px 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 7px;
+  border-radius: 10px;
   font-size: 15px;
+  background: #ffffff;
+  color: #0f172a;
   outline: none;
+  transition: all 0.2s ease;
 }
 
 .form-group input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .login-button {
   width: 100%;
   padding: 13px;
   border: none;
-  border-radius: 7px;
-  background: #2563eb;
-  color: white;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: #ffffff;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s ease;
 }
 
 .login-button:hover {
-  background: #1d4ed8;
+  opacity: 0.94;
+  transform: translateY(-1px);
 }
 
 .login-button:disabled {
-  background: #94a3b8;
+  background: #cbd5e1;
+  box-shadow: none;
   cursor: not-allowed;
+  transform: none;
 }
 
 .error-message {
   color: #dc2626;
   background: #fee2e2;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 15px;
+  border: 1px solid #fecaca;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .credentials-hint {
-  margin-top: 24px;
-  padding: 12px;
+  margin-top: 20px;
+  padding: 14px;
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 13px;
   color: #475569;
   text-align: center;
@@ -109,5 +173,6 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;
-  color: #1e293b;
+  color: #0f172a;
+  font-weight: 600;
 }

@@ -256,6 +256,19 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     if (uploadMode === "replace" || uploadMode === "overwrite") {
       await prisma.student.deleteMany();
+      await prisma.attendanceRecord.deleteMany();
+      await prisma.taskSubmission.deleteMany();
+
+      // Clean up physical uploaded proof files to keep database/uploads synchronized
+      const proofsDir = path.join(__dirname, "../../database/uploads/task-proofs");
+      if (fs.existsSync(proofsDir)) {
+        const files = fs.readdirSync(proofsDir);
+        files.forEach((file) => {
+          try {
+            fs.unlinkSync(path.join(proofsDir, file));
+          } catch (e) {}
+        });
+      }
     }
 
     const bcrypt = require("bcryptjs");
@@ -414,9 +427,21 @@ router.get("/", async (req, res) => {
 router.delete("/", async (req, res) => {
   try {
     await prisma.student.deleteMany();
+    await prisma.attendanceRecord.deleteMany();
+    await prisma.taskSubmission.deleteMany();
+
+    // Clean up files in database/uploads
+    const proofsDir = path.join(__dirname, "../../database/uploads/task-proofs");
+    if (fs.existsSync(proofsDir)) {
+      const files = fs.readdirSync(proofsDir);
+      files.forEach((file) => {
+        try { fs.unlinkSync(path.join(proofsDir, file)); } catch (e) {}
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      message: "All student data cleared successfully.",
+      message: "All student data and associated proof files cleared successfully.",
     });
   } catch (error) {
     console.error("Clear students error:", error);

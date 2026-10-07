@@ -71,41 +71,11 @@ function AdminLogin() {
       <div className="login-card" style={{ maxWidth: "440px" }}>
 
         {/* Role Toggle Header */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "24px", background: "rgba(255, 255, 255, 0.05)", padding: "4px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-          <Link
-            to="/student/login"
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "8px",
-              border: "none",
-              background: "transparent",
-              color: "rgba(255,255,255,0.6)",
-              fontWeight: 600,
-              textDecoration: "none",
-              textAlign: "center",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s"
-            }}
-          >
+        <div className="role-switcher">
+          <Link to="/student/login" className="role-tab-btn inactive">
             🎓 Student Portal
           </Link>
-          <button
-            type="button"
-            className="role-tab active"
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "8px",
-              border: "none",
-              background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-              color: "#fff",
-              fontWeight: 600,
-              cursor: "default",
-            }}
-          >
+          <button type="button" className="role-tab-btn active">
             🔑 Admin Login
           </button>
         </div>
