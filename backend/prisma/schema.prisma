@@ -105,3 +105,34 @@ model MasterDataUploadHistory {
 
   @@map("master_data_upload_history")
 }
+
+model News {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  category  String?  @default("Announcement")
+  postedBy  String   @default("Management Admin")
+  createdAt DateTime @default(now())
+
+  @@map("news")
+}
+
+model Event {
+  id            String   @id @default(uuid())
+  eventId       String   @unique
+  title         String
+  description   String
+  eventDate     String
+  eventTime     String?
+  venue         String?
+  domain        String   @default("All")
+  organizer     String
+  status        String   @default("Pending") // "Pending", "Approved", "Rejected"
+  feedback      String?
+  createdByRole String   @default("domain_admin")
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@map("events")
+}
+

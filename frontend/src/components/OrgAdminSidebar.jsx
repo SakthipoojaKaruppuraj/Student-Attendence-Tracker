@@ -72,6 +72,16 @@ function OrgAdminSidebar() {
           📝 Everyday Tasks
         </Link>
 
+        {/* News & Events */}
+        <Link
+          to="/org-admin/news-events"
+          className={`org-sidebar-link ${
+            location.pathname === "/org-admin/news-events" ? "active" : ""
+          }`}
+        >
+          📢 News & Events
+        </Link>
+
         {/* Logout */}
         <button
           onClick={handleLogout}

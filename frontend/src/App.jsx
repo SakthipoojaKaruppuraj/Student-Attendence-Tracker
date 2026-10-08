@@ -18,6 +18,7 @@ import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 
 import OrgAdminTasks from "./pages/OrgAdminTasks";
+import NewsEvents from "./pages/NewsEvents";
 
 // Route Guard for Management / Org Admin pages
 function OrgAdminRoute({ children }) {
@@ -124,6 +125,15 @@ function App() {
         />
 
         <Route
+          path="/org-admin/news-events"
+          element={
+            <OrgAdminRoute>
+              <NewsEvents />
+            </OrgAdminRoute>
+          }
+        />
+
+        <Route
           path="/admin/manage-admins"
           element={
             <Navigate to="/org-admin/manage-admins" replace />
@@ -134,6 +144,11 @@ function App() {
         <Route
           path="/student/dashboard"
           element={<StudentDashboard />}
+        />
+
+        <Route
+          path="/student/news-events"
+          element={<NewsEvents />}
         />
 
         {/* Domain Admin Views */}
@@ -160,6 +175,11 @@ function App() {
         <Route
           path="/admin/tasks"
           element={<Tasks />}
+        />
+
+        <Route
+          path="/admin/news-events"
+          element={<NewsEvents />}
         />
 
         <Route

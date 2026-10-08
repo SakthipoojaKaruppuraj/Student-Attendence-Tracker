@@ -78,6 +78,16 @@ function Sidebar() {
           📝 Everyday Tasks
         </Link>
 
+        {/* News & Events */}
+        <Link
+          to="/admin/news-events"
+          className={`sidebar-link ${
+            location.pathname === "/admin/news-events" ? "active" : ""
+          }`}
+        >
+          📢 News & Events
+        </Link>
+
         {/* Logout */}
         <button
           onClick={handleLogout}

@@ -216,6 +216,13 @@ function StudentDashboard() {
           {studentData?.soiLabVertical && (
             <span className="badge-tag vertical">{studentData?.soiLabVertical}</span>
           )}
+          <button
+            onClick={() => navigate("/student/news-events")}
+            className="tab-btn"
+            style={{ padding: "6px 14px", fontSize: "0.85rem", background: "#3b82f6", color: "#fff", border: "none" }}
+          >
+            📢 News & Events
+          </button>
           <button onClick={handleLogout} className="logout-btn">
             Logout 🚪
           </button>
@@ -284,6 +291,12 @@ function StudentDashboard() {
             onClick={() => setActiveTab("tasks")}
           >
             📋 Assigned Tasks ({tasks.length})
+          </button>
+          <button
+            className="tab-btn"
+            onClick={() => navigate("/student/news-events")}
+          >
+            📢 News & Upcoming Events
           </button>
           <button
             className={`tab-btn ${activeTab === "security" ? "active" : ""}`}
