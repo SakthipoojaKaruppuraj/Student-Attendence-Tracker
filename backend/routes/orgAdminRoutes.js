@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/db");
 const { requireOrgAdmin } = require("../middleware/authMiddleware");
+const { isDynamicDomainMatch } = require("../utils/domainMatcher");
 
 const router = express.Router();
 
@@ -256,57 +257,6 @@ router.delete("/admins/:adminId", requireOrgAdmin, async (req, res) => {
 // --------------------------------------------------
 // DOMAIN-WISE TASK SUMMARY REPORT (Management Only)
 // --------------------------------------------------
-function normalizeDomain(str) {
-  if (!str) return "";
-  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function matchesDomainKey(adminDomain, studentVertical) {
-  if (!adminDomain || !studentVertical) return false;
-  const aNorm = normalizeDomain(adminDomain);
-  const sNorm = normalizeDomain(studentVertical);
-
-  if (aNorm === sNorm) return true;
-
-  // Blockchain
-  if ((aNorm.includes("blockchain") || aNorm.includes("web3")) && 
-      (sNorm.includes("blockchain") || sNorm.includes("web3") || sNorm.startsWith("bw"))) {
-    return true;
-  }
-  // AI & Data Science
-  if ((aNorm.includes("datascience") || (aNorm.includes("ai") && aNorm.includes("data"))) && 
-      (sNorm.includes("datascience") || sNorm.startsWith("ad"))) {
-    return true;
-  }
-  // Cloud & DevOps
-  if ((aNorm.includes("cloud") || aNorm.includes("devops")) && 
-      (sNorm.includes("cloud") || sNorm.includes("devops") || sNorm.startsWith("cd"))) {
-    return true;
-  }
-  // Cyber Security
-  if ((aNorm.includes("cyber") || aNorm.includes("security")) && 
-      (sNorm.includes("cyber") || sNorm.startsWith("cs"))) {
-    return true;
-  }
-  // Embedded Systems & IoT
-  if ((aNorm.includes("embedded") || aNorm.includes("iot")) && 
-      (sNorm.includes("embedded") || sNorm.includes("iot") || sNorm.startsWith("ei"))) {
-    return true;
-  }
-  // Full Stack Web Development
-  if (aNorm.includes("fullstack") && 
-      (sNorm.includes("fullstack") || sNorm.startsWith("fw"))) {
-    return true;
-  }
-  // Design, Manufacturing and Automation
-  if ((aNorm.includes("manufacturing") || aNorm.includes("automation")) && 
-      (sNorm.includes("manufacturing") || sNorm.includes("automation") || sNorm.startsWith("ma") || sNorm.startsWith("dma"))) {
-    return true;
-  }
-
-  return false;
-}
-
 function matchesYearKey(itemYear, selectedYear) {
   if (!selectedYear || selectedYear === "All" || selectedYear === "all") return true;
   if (!itemYear) return false;
@@ -366,7 +316,7 @@ router.get("/tasks-summary", requireOrgAdmin, async (req, res) => {
 
     students.forEach((student) => {
       const vertical = student.soiLabVertical || student.department || "General";
-      let key = Object.keys(domainMap).find((k) => matchesDomainKey(k, vertical));
+      let key = Object.keys(domainMap).find((k) => isDynamicDomainMatch(k, vertical));
       if (!key) {
         key = vertical;
         if (!domainMap[key]) {
@@ -393,7 +343,7 @@ router.get("/tasks-summary", requireOrgAdmin, async (req, res) => {
           domainMap[key].totalTasks += 1;
         });
       } else {
-        let key = Object.keys(domainMap).find((k) => matchesDomainKey(k, tDomain));
+        let key = Object.keys(domainMap).find((k) => isDynamicDomainMatch(k, tDomain));
         if (key && domainMap[key]) {
           domainMap[key].totalTasks += 1;
         }
@@ -402,7 +352,7 @@ router.get("/tasks-summary", requireOrgAdmin, async (req, res) => {
 
     submissions.forEach((sub) => {
       const subDomain = sub.student?.soiLabVertical || sub.task?.domain || "General";
-      let key = Object.keys(domainMap).find((k) => matchesDomainKey(k, subDomain));
+      let key = Object.keys(domainMap).find((k) => isDynamicDomainMatch(k, subDomain));
       if (key && domainMap[key]) {
         if (sub.status === "Approved") {
           domainMap[key].approvedCount += 1;

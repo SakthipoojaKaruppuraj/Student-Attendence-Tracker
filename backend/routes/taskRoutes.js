@@ -4,6 +4,7 @@ const path = require("path");
 const multer = require("multer");
 const AdmZip = require("adm-zip");
 const prisma = require("../config/db");
+const { isDynamicDomainMatch } = require("../utils/domainMatcher");
 
 const router = express.Router();
 
@@ -68,24 +69,22 @@ async function generateSubmissionId() {
 
 // Helper to check domain and year matching
 function isStudentInTaskScope(student, taskDomain, taskYear) {
-  const tDomain = (taskDomain || "").toLowerCase().trim();
+  const tDomain = taskDomain || "";
   const tYear = (taskYear || "").toLowerCase().trim();
 
-  const sDomain = (student.soiLabVertical || "").toLowerCase().trim();
-  const sDept = (student.department || "").toLowerCase().trim();
+  const sDomain = student.soiLabVertical || "";
+  const sDept = student.department || "";
   const sYear = (student.year || "").toLowerCase().trim();
 
   const domainMatches =
-    tDomain === "all" ||
     !tDomain ||
-    tDomain.includes(sDomain) ||
-    sDomain.includes(tDomain) ||
-    tDomain.includes(sDept) ||
-    sDept.includes(tDomain);
+    tDomain.toLowerCase().trim() === "all" ||
+    isDynamicDomainMatch(tDomain, sDomain) ||
+    isDynamicDomainMatch(tDomain, sDept);
 
   const yearMatches =
-    tYear === "all" ||
     !tYear ||
+    tYear === "all" ||
     tYear.includes(sYear) ||
     sYear.includes(tYear);
 
@@ -104,13 +103,11 @@ router.get("/", async (req, res) => {
     });
 
     if (domain && domain !== "All" && domain !== "all") {
-      const cleanDomain = domain.toLowerCase().trim();
       tasks = tasks.filter((t) => {
-        const tDomain = (t.domain || "").toLowerCase().trim();
+        const tDomain = t.domain || "";
         return (
-          tDomain === "all" ||
-          tDomain.includes(cleanDomain) ||
-          cleanDomain.includes(tDomain)
+          tDomain.toLowerCase().trim() === "all" ||
+          isDynamicDomainMatch(domain, tDomain)
         );
       });
     }

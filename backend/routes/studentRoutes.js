@@ -4,6 +4,7 @@ const XLSX = require("xlsx");
 const fs = require("fs");
 const path = require("path");
 const prisma = require("../config/db");
+const { isDynamicDomainMatch } = require("../utils/domainMatcher");
 
 const router = express.Router();
 
@@ -366,15 +367,12 @@ router.get("/", async (req, res) => {
     });
 
     if (domain && domain !== "All" && domain !== "all") {
-      const cleanDomain = domain.toLowerCase().trim();
       students = students.filter((s) => {
-        const sVertical = (s.soiLabVertical || "").toLowerCase().trim();
-        const sDept = (s.department || "").toLowerCase().trim();
+        const sVertical = s.soiLabVertical || "";
+        const sDept = s.department || "";
         return (
-          sVertical.includes(cleanDomain) ||
-          sDept.includes(cleanDomain) ||
-          cleanDomain.includes(sVertical) ||
-          cleanDomain.includes(sDept)
+          isDynamicDomainMatch(domain, sVertical) ||
+          isDynamicDomainMatch(domain, sDept)
         );
       });
     }
