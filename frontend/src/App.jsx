@@ -17,6 +17,8 @@ import AdminManagement from "./pages/AdminManagement";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
 
+import OrgAdminTasks from "./pages/OrgAdminTasks";
+
 // Route Guard for Management / Org Admin pages
 function OrgAdminRoute({ children }) {
   const token = localStorage.getItem("orgAdminToken") || localStorage.getItem("adminToken");
@@ -116,7 +118,7 @@ function App() {
           path="/org-admin/tasks"
           element={
             <OrgAdminRoute>
-              <Tasks />
+              <OrgAdminTasks />
             </OrgAdminRoute>
           }
         />
