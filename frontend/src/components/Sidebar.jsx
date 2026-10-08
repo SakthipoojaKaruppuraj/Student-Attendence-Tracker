@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import OrgAdminSidebar from "./OrgAdminSidebar";
 import "../styles/Sidebar.css";
 
 function Sidebar() {
@@ -15,26 +16,24 @@ function Sidebar() {
     }
   }
 
+  if (admin?.role === "org_admin") {
+    return <OrgAdminSidebar />;
+  }
+
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("admin");
     navigate("/admin/login");
   };
 
-  const isOrgAdmin = admin?.role === "org_admin";
-
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
         <h2>SMS Tracker</h2>
         <div className="sidebar-role-badge">
-          {isOrgAdmin ? (
-            <span className="badge-org">👑 Organisation Admin</span>
-          ) : (
-            <span className="badge-domain">
-              📍 {admin?.domain || "Domain Admin"}
-            </span>
-          )}
+          <span className="badge-domain">
+            📍 {admin?.domain || "Domain Admin"}
+          </span>
         </div>
       </div>
 
@@ -48,18 +47,6 @@ function Sidebar() {
         >
           📊 Dashboard
         </Link>
-
-        {/* Organisation Admin Exclusive: Manage Admins */}
-        {isOrgAdmin && (
-          <Link
-            to="/admin/manage-admins"
-            className={`sidebar-link ${
-              location.pathname === "/admin/manage-admins" ? "active" : ""
-            }`}
-          >
-            🛡️ Manage Admins
-          </Link>
-        )}
 
         {/* Attendance */}
         <Link
@@ -105,7 +92,7 @@ function Sidebar() {
             color: "#f87171",
           }}
         >
-          🚪 Logout ({admin?.name || admin?.username || "Admin"})
+          🚪 Logout ({admin?.name || admin?.username || "Domain Admin"})
         </button>
       </nav>
     </aside>

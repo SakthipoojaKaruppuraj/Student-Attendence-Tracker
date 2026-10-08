@@ -6,6 +6,8 @@ import {
 } from "react-router-dom";
 
 import AdminLogin from "./pages/AdminLogin";
+import OrgAdminLogin from "./pages/OrgAdminLogin";
+import OrgAdminDashboard from "./pages/OrgAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Attendance from "./pages/Attendance";
 import Tasks from "./pages/Tasks";
@@ -14,6 +16,27 @@ import StudentProfile from "./pages/StudentProfile";
 import AdminManagement from "./pages/AdminManagement";
 import StudentLogin from "./pages/StudentLogin";
 import StudentDashboard from "./pages/StudentDashboard";
+
+// Route Guard for Management / Org Admin pages
+function OrgAdminRoute({ children }) {
+  const token = localStorage.getItem("orgAdminToken") || localStorage.getItem("adminToken");
+  const adminData = localStorage.getItem("admin");
+
+  if (!token || !adminData) {
+    return <Navigate to="/org-admin/login" replace />;
+  }
+
+  try {
+    const admin = JSON.parse(adminData);
+    if (admin.role !== "org_admin") {
+      return <Navigate to="/org-admin/login" replace />;
+    }
+  } catch (e) {
+    return <Navigate to="/org-admin/login" replace />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
@@ -29,29 +52,92 @@ function App() {
           }
         />
 
-        <Route
-          path="/admin/login"
-          element={<AdminLogin />}
-        />
-
+        {/* Login Portals */}
         <Route
           path="/student/login"
           element={<StudentLogin />}
         />
 
         <Route
-          path="/student/dashboard"
-          element={<StudentDashboard />}
+          path="/admin/login"
+          element={<AdminLogin />}
         />
 
         <Route
-          path="/admin/dashboard"
-          element={<AdminDashboard />}
+          path="/org-admin/login"
+          element={<OrgAdminLogin />}
+        />
+
+        {/* Management Portal Exclusive Routes */}
+        <Route
+          path="/org-admin/dashboard"
+          element={
+            <OrgAdminRoute>
+              <OrgAdminDashboard />
+            </OrgAdminRoute>
+          }
+        />
+
+        <Route
+          path="/org-admin/manage-admins"
+          element={
+            <OrgAdminRoute>
+              <AdminManagement />
+            </OrgAdminRoute>
+          }
+        />
+
+        <Route
+          path="/org-admin/attendance"
+          element={
+            <OrgAdminRoute>
+              <Attendance />
+            </OrgAdminRoute>
+          }
+        />
+
+        <Route
+          path="/org-admin/students"
+          element={
+            <OrgAdminRoute>
+              <StudentData />
+            </OrgAdminRoute>
+          }
+        />
+
+        <Route
+          path="/org-admin/master-data"
+          element={
+            <Navigate to="/org-admin/students" replace />
+          }
+        />
+
+        <Route
+          path="/org-admin/tasks"
+          element={
+            <OrgAdminRoute>
+              <Tasks />
+            </OrgAdminRoute>
+          }
         />
 
         <Route
           path="/admin/manage-admins"
-          element={<AdminManagement />}
+          element={
+            <Navigate to="/org-admin/manage-admins" replace />
+          }
+        />
+
+        {/* Student View */}
+        <Route
+          path="/student/dashboard"
+          element={<StudentDashboard />}
+        />
+
+        {/* Domain Admin Views */}
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboard />}
         />
 
         <Route

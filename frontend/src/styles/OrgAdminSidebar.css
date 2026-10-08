@@ -1,0 +1,82 @@
+/* Dedicated Sidebar for Organisation Management */
+
+.org-sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #4c1d95 0%, #312e81 100%);
+  color: white;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.org-sidebar-logo {
+  padding: 22px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.org-sidebar-logo h2 {
+  font-size: 18px;
+  margin-bottom: 6px;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.org-sidebar-role-badge {
+  margin-top: 4px;
+}
+
+.org-sidebar-role-badge .badge-org {
+  display: inline-block;
+  background: #f59e0b;
+  color: #78350f;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.org-sidebar-nav {
+  padding: 20px 12px;
+}
+
+.org-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  margin-bottom: 7px;
+  border-radius: 10px;
+  color: #e0e7ff;
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.org-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.org-sidebar-link.active {
+  background: #ffffff;
+  color: #4c1d95;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.org-sidebar-link.logout-btn {
+  color: #fca5a5;
+}
+
+.org-sidebar-link.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}

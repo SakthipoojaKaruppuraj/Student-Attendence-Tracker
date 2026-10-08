@@ -2,25 +2,27 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const prisma = require("../config/db");
+const { requireOrgAdmin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// --------------------------------------------------
-// DOMAIN ADMIN LOGIN
-// --------------------------------------------------
+// Master Security PIN for high-risk operations (can be set via env, fallback to secure default)
+const MASTER_PIN = process.env.ORG_ADMIN_MASTER_PIN || "998877";
 
+// --------------------------------------------------
+// ORG ADMIN (MANAGEMENT) LOGIN
+// --------------------------------------------------
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({
       success: false,
-      message: "Username and password are required",
+      message: "Username and password are required.",
     });
   }
 
   try {
-    // Find admin in PostgreSQL using Prisma
     const admins = await prisma.admin.findMany();
     const admin = admins.find(
       (item) =>
@@ -31,16 +33,16 @@ router.post("/login", async (req, res) => {
     if (!admin) {
       return res.status(401).json({
         success: false,
-        message: "Invalid username or password",
+        message: "Invalid username or password.",
       });
     }
 
-    // Reject Org Admin from logging in through Domain Admin portal
-    if (admin.role === "org_admin") {
+    // Explicitly verify role
+    if (admin.role !== "org_admin") {
       return res.status(403).json({
         success: false,
-        message: "Organisation Admin accounts must log in through the Management Portal (/org-admin/login).",
-        isOrgAdmin: true
+        message:
+          "Access denied. Domain Admin accounts cannot log in through the Management Portal. Please use the Domain Admin Login portal.",
       });
     }
 
@@ -52,7 +54,7 @@ router.post("/login", async (req, res) => {
     if (!passwordMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid username or password",
+        message: "Invalid username or password.",
       });
     }
 
@@ -61,8 +63,8 @@ router.post("/login", async (req, res) => {
       {
         admin_id: admin.adminId,
         username: admin.username,
-        role: admin.role || "domain_admin",
-        domain: admin.domain || "All",
+        role: "org_admin",
+        domain: "All",
       },
       secretKey,
       {
@@ -72,30 +74,45 @@ router.post("/login", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Login successful",
+      message: "Management authentication successful",
       token,
       admin: {
         admin_id: admin.adminId,
         username: admin.username,
         name: admin.name || admin.username,
-        role: admin.role || "domain_admin",
+        role: "org_admin",
         domain: admin.domain || "All",
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Org Admin login error:", error);
     return res.status(500).json({
       success: false,
-      message: "Authentication failed",
+      message: "Authentication failed due to server error.",
     });
   }
 });
 
 // --------------------------------------------------
-// GET ALL ADMINS (Organisation Admin View)
+// VERIFY MASTER SECURITY PIN
 // --------------------------------------------------
+router.post("/verify-pin", requireOrgAdmin, (req, res) => {
+  const { pin } = req.body;
+  if (!pin) {
+    return res.status(400).json({ success: false, message: "Security PIN is required." });
+  }
 
-router.get("/", async (req, res) => {
+  if (String(pin).trim() === String(MASTER_PIN).trim()) {
+    return res.json({ success: true, message: "Security PIN verified successfully." });
+  } else {
+    return res.status(401).json({ success: false, message: "Invalid Security PIN." });
+  }
+});
+
+// --------------------------------------------------
+// GET ALL ADMINS (Management Only)
+// --------------------------------------------------
+router.get("/admins", requireOrgAdmin, async (req, res) => {
   try {
     const admins = await prisma.admin.findMany({
       orderBy: { createdAt: "asc" },
@@ -118,23 +135,22 @@ router.get("/", async (req, res) => {
     console.error("Get admins error:", error);
     return res.status(500).json({
       success: false,
-      message: "Unable to load admins.",
+      message: "Unable to load admins list.",
     });
   }
 });
 
 // --------------------------------------------------
-// CREATE NEW DOMAIN ADMIN
+// CREATE NEW ADMIN (Management Only)
 // --------------------------------------------------
-
-router.post("/", async (req, res) => {
+router.post("/admins", requireOrgAdmin, async (req, res) => {
   try {
     const { name, username, password, domain, role } = req.body;
 
     if (!username || !password || !domain) {
       return res.status(400).json({
         success: false,
-        message: "Username, password and domain are required.",
+        message: "Username, password, and domain are required.",
       });
     }
 
@@ -196,10 +212,9 @@ router.post("/", async (req, res) => {
 });
 
 // --------------------------------------------------
-// DELETE ADMIN
+// DELETE ADMIN (Management Only)
 // --------------------------------------------------
-
-router.delete("/:adminId", async (req, res) => {
+router.delete("/admins/:adminId", requireOrgAdmin, async (req, res) => {
   try {
     const { adminId } = req.params;
 

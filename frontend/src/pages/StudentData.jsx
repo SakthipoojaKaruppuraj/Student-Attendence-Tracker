@@ -28,8 +28,85 @@ function StudentData() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const downloadMasterAttendanceCSV = async () => {
+    try {
+      setDownloadingReport(true);
+      const adminData = localStorage.getItem("admin");
+      let domainParam = "";
+      if (adminData) {
+        try {
+          const parsed = JSON.parse(adminData);
+          if (parsed.role === "domain_admin" && parsed.domain && parsed.domain !== "All") {
+            domainParam = `?domain=${encodeURIComponent(parsed.domain)}`;
+          }
+        } catch (e) {}
+      }
+
+      const response = await axios.get(`${API_URL}/api/attendance/master-report${domainParam}`);
+
+      if (!response.data.success) {
+        alert("Failed to generate master attendance report.");
+        return;
+      }
+
+      const { dates, students: reportRows } = response.data;
+
+      const masterHeaders = [
+        "S.No.",
+        "Student Name",
+        "Register Number",
+        "Roll Number",
+        "Department",
+        "Section",
+        "Gender",
+        "Year",
+        "SoI Lab Vertical",
+        "KITE Email ID",
+        "SoI Email ID",
+        "Remarks",
+        ...dates,
+      ];
+
+      const csvRows = reportRows.map((row) => {
+        const baseValues = [
+          row.s_no,
+          `"${(row.student_name || "").replace(/"/g, '""')}"`,
+          `"${(row.register_number || "").replace(/"/g, '""')}"`,
+          `"${(row.roll_number || "").replace(/"/g, '""')}"`,
+          `"${(row.department || "").replace(/"/g, '""')}"`,
+          `"${(row.section || "").replace(/"/g, '""')}"`,
+          `"${(row.gender || "").replace(/"/g, '""')}"`,
+          `"${(row.year || "").replace(/"/g, '""')}"`,
+          `"${(row.soi_lab_vertical || "").replace(/"/g, '""')}"`,
+          `"${(row.kite_email || "").replace(/"/g, '""')}"`,
+          `"${(row.soi_email || "").replace(/"/g, '""')}"`,
+          `"${(row.remarks || "").replace(/"/g, '""')}"`,
+        ];
+
+        const dateStatuses = dates.map((d) => `"${(row[d] || "-").replace(/"/g, '""')}"`);
+
+        return [...baseValues, ...dateStatuses].join(",");
+      });
+
+      const csvContent = [masterHeaders.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Master_Attendance_Report_${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading master attendance report:", err);
+      alert("Failed to download master attendance report.");
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   // Fetch existing student data
   const fetchStudents = async () => {
@@ -525,7 +602,29 @@ function StudentData() {
               </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <button
+                onClick={downloadMasterAttendanceCSV}
+                disabled={downloadingReport}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#059669",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "9px 15px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(5, 150, 105, 0.25)",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                📥 {downloadingReport ? "Generating Report..." : "Download Master Attendance Report"}
+              </button>
+
               <input
                 type="text"
                 placeholder="🔍 Search name, reg no, roll no..."
@@ -535,7 +634,7 @@ function StudentData() {
                   padding: "9px 14px",
                   borderRadius: "8px",
                   border: "1px solid #cbd5e1",
-                  width: "280px",
+                  width: "250px",
                   fontSize: "13px",
                 }}
               />

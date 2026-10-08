@@ -4,6 +4,7 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const adminRoutes = require("./routes/adminRoutes");
+const orgAdminRoutes = require("./routes/orgAdminRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const studentRoutes = require("./routes/studentRoutes");
@@ -15,7 +16,10 @@ app.use(cors());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
-// Admin
+// Management (Org Admin) Routes
+app.use("/api/org-admin", orgAdminRoutes);
+
+// Admin Routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/admins", adminRoutes);
 

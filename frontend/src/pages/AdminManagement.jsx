@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
+import OrgAdminSidebar from "../components/OrgAdminSidebar";
 import "../styles/AdminManagement.css";
-
-const API_BASE = "http://localhost:5001/api";
 
 const DOMAIN_OPTIONS = [
   "BW - Blockchain and Web3.0 Lab",
@@ -31,15 +29,33 @@ function AdminManagement() {
     customDomain: "",
   });
 
+  const getAuthHeaders = () => {
+    const token =
+      localStorage.getItem("orgAdminToken") ||
+      localStorage.getItem("adminToken");
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  const getApiUrl = (endpoint) => {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5001";
+    return `${baseUrl}/api/org-admin${endpoint}`;
+  };
+
   const fetchAdmins = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/admins`);
+      const response = await axios.get(getApiUrl("/admins"), getAuthHeaders());
       if (response.data.success) {
         setAdmins(response.data.admins);
       }
     } catch (err) {
       console.error("Error fetching admins:", err);
-      setError("Unable to load admin accounts.");
+      setError(
+        err.response?.data?.message || "Unable to load admin accounts."
+      );
     }
   };
 
@@ -70,13 +86,17 @@ function AdminManagement() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/admins`, {
-        name: formData.name,
-        username: formData.username,
-        password: formData.password,
-        domain: targetDomain,
-        role: "domain_admin",
-      });
+      const response = await axios.post(
+        getApiUrl("/admins"),
+        {
+          name: formData.name,
+          username: formData.username,
+          password: formData.password,
+          domain: targetDomain,
+          role: "domain_admin",
+        },
+        getAuthHeaders()
+      );
 
       if (response.data.success) {
         setMessage(`Admin account for "${formData.name}" created successfully.`);
@@ -110,7 +130,10 @@ function AdminManagement() {
     }
 
     try {
-      const response = await axios.delete(`${API_BASE}/admins/${adminId}`);
+      const response = await axios.delete(
+        getApiUrl(`/admins/${adminId}`),
+        getAuthHeaders()
+      );
       if (response.data.success) {
         setMessage(`Admin account "${adminName}" deleted successfully.`);
         fetchAdmins();
@@ -131,7 +154,7 @@ function AdminManagement() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <OrgAdminSidebar />
 
       <main className="admin-mgmt-page">
         {/* HEADER */}
@@ -263,8 +286,16 @@ function AdminManagement() {
               </div>
 
               <form onSubmit={handleCreateAdmin}>
-                {error && <div className="error-message" style={{ marginBottom: "15px" }}>⚠ {error}</div>}
-                {message && <div className="success-message" style={{ marginBottom: "15px" }}>✓ {message}</div>}
+                {error && (
+                  <div className="error-message" style={{ marginBottom: "15px" }}>
+                    ⚠ {error}
+                  </div>
+                )}
+                {message && (
+                  <div className="success-message" style={{ marginBottom: "15px" }}>
+                    ✓ {message}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label>Admin Name *</label>
