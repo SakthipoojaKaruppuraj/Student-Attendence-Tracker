@@ -19,6 +19,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 
 import OrgAdminTasks from "./pages/OrgAdminTasks";
 import NewsEvents from "./pages/NewsEvents";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Route Guard for Management / Org Admin pages
 function OrgAdminRoute({ children }) {
@@ -143,12 +144,20 @@ function App() {
         {/* Student View */}
         <Route
           path="/student/dashboard"
-          element={<StudentDashboard />}
+          element={
+            <ErrorBoundary>
+              <StudentDashboard />
+            </ErrorBoundary>
+          }
         />
 
         <Route
           path="/student/news-events"
-          element={<NewsEvents />}
+          element={
+            <ErrorBoundary>
+              <NewsEvents />
+            </ErrorBoundary>
+          }
         />
 
         {/* Domain Admin Views */}

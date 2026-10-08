@@ -94,37 +94,40 @@ async function main() {
   if (fs.existsSync(attendanceFile)) {
     const attendanceRecords = await parseCsv(attendanceFile);
     console.log(`⏳ Seeding ${attendanceRecords.length} Attendance Records...`);
+    await prisma.attendanceRecord.deleteMany();
+    const allStudents = await prisma.student.findMany({
+      select: { rollNumber: true, studentName: true, year: true },
+    });
+    const studentMap = new Map(allStudents.map((s) => [s.rollNumber, s]));
+
+    const validRecords = [];
+    const seenKeys = new Set();
+
     for (const record of attendanceRecords) {
       if (!record.date || !record.student_id) continue;
-      // Ensure student exists
-      const studentExists = await prisma.student.findUnique({
-        where: { rollNumber: record.student_id },
-      });
-
+      const studentExists = studentMap.get(record.student_id);
       if (studentExists) {
-        await prisma.attendanceRecord.upsert({
-          where: {
-            date_studentId: {
-              date: record.date,
-              studentId: record.student_id,
-            },
-          },
-          update: {
-            status: record.status,
-            remarks: record.remarks || null,
-            studentName: record.student_name || studentExists.studentName,
-            year: record.year || studentExists.year,
-          },
-          create: {
+        const uniqueKey = `${record.date}_${record.student_id}`;
+        if (!seenKeys.has(uniqueKey)) {
+          seenKeys.add(uniqueKey);
+          validRecords.push({
             date: record.date,
             studentId: record.student_id,
             studentName: record.student_name || studentExists.studentName,
             year: record.year || studentExists.year,
             status: record.status,
             remarks: record.remarks || null,
-          },
-        });
+          });
+        }
       }
+    }
+
+    const chunkSize = 1000;
+    for (let i = 0; i < validRecords.length; i += chunkSize) {
+      const chunk = validRecords.slice(i, i + chunkSize);
+      await prisma.attendanceRecord.createMany({
+        data: chunk,
+      });
     }
     console.log("✅ Attendance Records seeded successfully.");
   }

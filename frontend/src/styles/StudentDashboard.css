@@ -94,6 +94,14 @@
   padding: 0 24px;
 }
 
+.student-dashboard-container.with-sidebar .dashboard-content {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  max-width: 1350px;
+  padding: 32px 40px;
+  box-sizing: border-box;
+}
+
 /* Default Password Warning Banner */
 .warning-banner {
   background: #fffbeb;

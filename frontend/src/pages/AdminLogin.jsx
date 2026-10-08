@@ -43,6 +43,11 @@ function AdminLogin() {
         }
       }
 
+      // Clear conflicting role tokens
+      localStorage.removeItem("studentToken");
+      localStorage.removeItem("student");
+      localStorage.removeItem("orgAdminToken");
+
       // Store JWT token
       localStorage.setItem("adminToken", response.data.token);
 

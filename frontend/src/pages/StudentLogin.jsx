@@ -40,6 +40,9 @@ function StudentLogin() {
       }
 
       if (response.data.success) {
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("orgAdminToken");
+        localStorage.removeItem("admin");
         localStorage.setItem("studentToken", response.data.token);
         localStorage.setItem("student", JSON.stringify(response.data.student));
         navigate("/student/dashboard");

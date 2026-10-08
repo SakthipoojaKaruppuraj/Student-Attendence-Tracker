@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import StudentSidebar from "../components/StudentSidebar";
 import "../styles/StudentDashboard.css";
 
 function StudentDashboard() {
@@ -8,7 +9,7 @@ function StudentDashboard() {
   const [stats, setStats] = useState(null);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [activeTab, setActiveTab] = useState("attendance"); // "attendance", "tasks", "security"
+  const [activeTab, setActiveTab] = useState("attendance"); // "attendance", "tasks", "profile", "security"
   const [loading, setLoading] = useState(true);
 
   // Task Submission Modal State
@@ -27,6 +28,21 @@ function StudentDashboard() {
   const [changingPwd, setChangingPwd] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      if (tabParam === "profile" || tabParam === "security") {
+        setActiveTab("profile");
+      } else if (tabParam === "tasks") {
+        setActiveTab("tasks");
+      } else if (tabParam === "attendance") {
+        setActiveTab("attendance");
+      }
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const token = localStorage.getItem("studentToken");
@@ -59,16 +75,16 @@ function StudentDashboard() {
       try {
         res = await axios.get(getApiUrl(`/api/student-auth/me/progress?rollNumber=${rollNumber}`));
       } catch (err) {
-        if (!import.meta.env.VITE_API_URL && err.code === "ERR_NETWORK") {
+        try {
           res = await axios.get(`http://localhost:5001/api/student-auth/me/progress?rollNumber=${rollNumber}`);
-        } else {
-          throw err;
+        } catch (err2) {
+          console.error("Failed to fetch student progress:", err2);
         }
       }
 
-      if (res.data.success) {
-        setStudentData(res.data.student);
-        setStats(res.data.stats);
+      if (res && res.data && res.data.success) {
+        setStudentData(res.data.student || studentData);
+        setStats(res.data.stats || { attendancePercentage: 0, totalDays: 0, presentDays: 0, absentDays: 0, odDays: 0, totalAssignedTasks: 0, completedTasks: 0, pendingTasks: 0 });
         setAttendanceRecords(res.data.attendanceRecords || []);
         setTasks(res.data.tasks || []);
       }
@@ -198,149 +214,118 @@ function StudentDashboard() {
   }
 
   return (
-    <div className="student-dashboard-container">
-      {/* Top Navbar */}
-      <nav className="student-navbar">
-        <div className="brand-section">
-          <div className="brand-icon">🎓</div>
+    <div className="student-dashboard-container with-sidebar">
+      {/* Student Sidebar */}
+      <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Main Body */}
+      <main className="dashboard-content">
+        {/* Header Title Banner */}
+        <div className="student-header-banner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", paddingBottom: "16px", borderBottom: "1px solid #e2e8f0" }}>
           <div>
-            <h2 className="brand-title">Student Portal</h2>
-            <span style={{ fontSize: "0.825rem", color: "#64748b", fontWeight: "500" }}>
-              {studentData?.studentName} ({studentData?.rollNumber})
+            <h1 style={{ margin: 0, fontSize: "24px", color: "#0f172a", fontWeight: "800" }}>
+              Welcome, {studentData?.studentName}
+            </h1>
+            <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "14px" }}>
+              {studentData?.rollNumber} • {studentData?.department} ({studentData?.year})
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <span className="badge-tag" style={{ background: "#dbeafe", color: "#1d4ed8", padding: "6px 14px", borderRadius: "20px", fontWeight: "700", fontSize: "13px" }}>
+              📍 {studentData?.soiLabVertical || studentData?.department}
             </span>
           </div>
         </div>
 
-        <div className="user-profile-section">
-          <span className="badge-tag">{studentData?.year}</span>
-          {studentData?.soiLabVertical && (
-            <span className="badge-tag vertical">{studentData?.soiLabVertical}</span>
-          )}
-          <button
-            onClick={() => navigate("/student/news-events")}
-            className="tab-btn"
-            style={{ padding: "6px 14px", fontSize: "0.85rem", background: "#3b82f6", color: "#fff", border: "none" }}
-          >
-            📢 News & Events
-          </button>
-          <button onClick={handleLogout} className="logout-btn">
-            Logout 🚪
-          </button>
-        </div>
-      </nav>
-
-      {/* Main Body */}
-      <main className="dashboard-content">
         {/* Warning Banner if password is still default */}
         {studentData?.isDefaultPassword && (
           <div className="warning-banner">
             <div>
               <strong>🔒 Security Reminder:</strong> You are currently using your default password (<code>Kitesoi@123</code>).
             </div>
-            <button onClick={() => setActiveTab("security")}>Change Password Now</button>
+            <button onClick={() => setActiveTab("profile")}>Change Password Now</button>
           </div>
         )}
 
-        {/* KPI Grid */}
-        <div className="kpi-grid">
-          <div className={`kpi-card ${stats?.attendancePercentage >= 75 ? "green" : "amber"}`}>
-            <div className="kpi-title">Overall Attendance</div>
-            <div className="kpi-value">{stats?.attendancePercentage}%</div>
-            <div className="kpi-subtext">
-              {stats?.presentDays + stats?.odDays} of {stats?.totalDays} Sessions Attended
-            </div>
-          </div>
-
-          <div className="kpi-card green">
-            <div className="kpi-title">Present & OD Days</div>
-            <div className="kpi-value">{stats?.presentDays + stats?.odDays}</div>
-            <div className="kpi-subtext">
-              {stats?.presentDays} Present | {stats?.odDays} On-Duty
-            </div>
-          </div>
-
-          <div className="kpi-card purple">
-            <div className="kpi-title">Tasks Completed</div>
-            <div className="kpi-value">
-              {stats?.completedTasks} / {stats?.totalAssignedTasks}
-            </div>
-            <div className="kpi-subtext">
-              {stats?.pendingTasks} Tasks Pending Submission
-            </div>
-          </div>
-
-          <div className="kpi-card">
-            <div className="kpi-title">Department & Vertical</div>
-            <div className="kpi-value" style={{ fontSize: "1.3rem", paddingTop: "6px" }}>
-              {studentData?.soiLabVertical || studentData?.department || "General"}
-            </div>
-            <div className="kpi-subtext">{studentData?.department} ({studentData?.section || "A"})</div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="tabs-header">
-          <button
-            className={`tab-btn ${activeTab === "attendance" ? "active" : ""}`}
-            onClick={() => setActiveTab("attendance")}
-          >
-            📊 My Attendance History ({attendanceRecords.length})
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "tasks" ? "active" : ""}`}
-            onClick={() => setActiveTab("tasks")}
-          >
-            📋 Assigned Tasks ({tasks.length})
-          </button>
-          <button
-            className="tab-btn"
-            onClick={() => navigate("/student/news-events")}
-          >
-            📢 News & Upcoming Events
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "security" ? "active" : ""}`}
-            onClick={() => setActiveTab("security")}
-          >
-            🔒 Security & Settings
-          </button>
-        </div>
-
         {/* TAB 1: ATTENDANCE */}
         {activeTab === "attendance" && (
-          <div className="data-table-wrapper">
-            {attendanceRecords.length === 0 ? (
-              <p style={{ padding: "32px", textAlign: "center", color: "#64748b", fontSize: "0.95rem" }}>
-                No attendance records logged yet for your profile.
-              </p>
-            ) : (
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceRecords.map((rec) => (
-                    <tr key={rec.id}>
-                      <td><strong>{rec.date}</strong></td>
-                      <td>
-                        <span className={`status-badge ${rec.status.toLowerCase()}`}>
-                          {rec.status === "P" && "Present (P)"}
-                          {rec.status === "A" && "Absent (A)"}
-                          {rec.status === "OD" && "On-Duty (OD)"}
-                          {rec.status === "ML" && "Medical Leave (ML)"}
-                        </span>
-                      </td>
-                      <td style={{ color: "#64748b" }}>{rec.remarks || "-"}</td>
+          <>
+            {/* KPI Grid */}
+            <div className="kpi-grid">
+              <div className={`kpi-card ${(stats?.attendancePercentage || 0) >= 75 ? "green" : "amber"}`}>
+                <div className="kpi-title">Overall Attendance</div>
+                <div className="kpi-value">{stats?.attendancePercentage ?? 0}%</div>
+                <div className="kpi-subtext">
+                  {(stats?.presentDays || 0) + (stats?.odDays || 0)} of {stats?.totalDays || 0} Sessions Attended
+                </div>
+              </div>
+
+              <div className="kpi-card green">
+                <div className="kpi-title">Present & OD Days</div>
+                <div className="kpi-value">{(stats?.presentDays || 0) + (stats?.odDays || 0)}</div>
+                <div className="kpi-subtext">
+                  {stats?.presentDays || 0} Present | {stats?.odDays || 0} On-Duty
+                </div>
+              </div>
+
+              <div className="kpi-card purple">
+                <div className="kpi-title">Tasks Completed</div>
+                <div className="kpi-value">
+                  {stats?.completedTasks || 0} / {stats?.totalAssignedTasks || 0}
+                </div>
+                <div className="kpi-subtext">
+                  {stats?.pendingTasks || 0} Tasks Pending Submission
+                </div>
+              </div>
+
+              <div className="kpi-card">
+                <div className="kpi-title">Department & Vertical</div>
+                <div className="kpi-value" style={{ fontSize: "1.3rem", paddingTop: "6px" }}>
+                  {studentData?.soiLabVertical || studentData?.department || "General"}
+                </div>
+                <div className="kpi-subtext">{studentData?.department} ({studentData?.section || "A"})</div>
+              </div>
+            </div>
+
+            <div className="data-table-wrapper">
+              {attendanceRecords.length === 0 ? (
+                <p style={{ padding: "32px", textAlign: "center", color: "#64748b", fontSize: "0.95rem" }}>
+                  No attendance records logged yet for your profile.
+                </p>
+              ) : (
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Remarks</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  </thead>
+                  <tbody>
+                    {attendanceRecords.map((rec) => (
+                      <tr key={rec.id}>
+                        <td><strong>{rec.date}</strong></td>
+                        <td>
+                          <span className={`status-badge ${String(rec.status || "").toLowerCase()}`}>
+                            {rec.status === "P"
+                              ? "Present (P)"
+                              : rec.status === "A"
+                              ? "Absent (A)"
+                              : rec.status === "OD"
+                              ? "On-Duty (OD)"
+                              : rec.status === "ML"
+                              ? "Medical Leave (ML)"
+                              : rec.status || "Present"}
+                          </span>
+                        </td>
+                        <td style={{ color: "#64748b" }}>{rec.remarks || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
         )}
 
         {/* TAB 2: TASKS & SUBMISSIONS */}
@@ -403,13 +388,31 @@ function StudentDashboard() {
           </div>
         )}
 
-        {/* TAB 3: CHANGE PASSWORD / SECURITY */}
-        {activeTab === "security" && (
-          <div className="data-table-wrapper" style={{ padding: "32px", maxWidth: "500px", margin: "0 auto" }}>
-            <h3 style={{ marginTop: 0, marginBottom: "8px", color: "#0f172a" }}>Change Account Password</h3>
-            <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "24px" }}>
-              Update your login password from the default <code>Kitesoi@123</code>.
-            </p>
+        {/* TAB 3: PROFILE & SECURITY */}
+        {(activeTab === "profile" || activeTab === "security") && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "900px", margin: "0 auto" }}>
+            {/* Student Profile Overview Card */}
+            <div className="data-table-wrapper" style={{ padding: "28px" }}>
+              <h3 style={{ marginTop: 0, marginBottom: "16px", color: "#0f172a" }}>👤 Student Profile Details</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "14px", color: "#334155" }}>
+                <div><strong>Student Name:</strong> {studentData?.studentName}</div>
+                <div><strong>Roll Number:</strong> {studentData?.rollNumber}</div>
+                <div><strong>Register Number:</strong> {studentData?.registerNumber || "-"}</div>
+                <div><strong>Department:</strong> {studentData?.department}</div>
+                <div><strong>Section:</strong> {studentData?.section || "A"}</div>
+                <div><strong>Academic Year:</strong> {studentData?.year}</div>
+                <div><strong>SoI Lab Vertical:</strong> {studentData?.soiLabVertical || "General"}</div>
+                <div><strong>KITE Email:</strong> {studentData?.kiteEmail || "-"}</div>
+                <div><strong>SoI Email:</strong> {studentData?.soiEmail || "-"}</div>
+              </div>
+            </div>
+
+            {/* Change Password Card */}
+            <div className="data-table-wrapper" style={{ padding: "28px" }}>
+              <h3 style={{ marginTop: 0, marginBottom: "8px", color: "#0f172a" }}>🔒 Security Settings</h3>
+              <p style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "20px" }}>
+                Update your account login password.
+              </p>
 
             {pwdMsg.text && (
               <div
@@ -484,6 +487,7 @@ function StudentDashboard() {
               </button>
             </form>
           </div>
+        </div>
         )}
       </main>
 

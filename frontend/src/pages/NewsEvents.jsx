@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import OrgAdminSidebar from "../components/OrgAdminSidebar";
+import StudentSidebar from "../components/StudentSidebar";
 import "../styles/NewsEvents.css";
 
 function NewsEvents() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [role, setRole] = useState("student"); // "org_admin", "domain_admin", "student"
   const [userDomain, setUserDomain] = useState("All");
   const [userName, setUserName] = useState("");
@@ -37,53 +39,68 @@ function NewsEvents() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Detect user role
-    const adminData = localStorage.getItem("admin");
-    const orgToken = localStorage.getItem("orgAdminToken");
+    const path = location.pathname;
 
-    if (adminData) {
-      try {
-        const parsed = JSON.parse(adminData);
-        setRole(parsed.role || "domain_admin");
-        setUserDomain(parsed.domain || "All");
-        setUserName(parsed.name || parsed.username || "Admin");
-      } catch (e) {}
-    } else if (orgToken) {
-      setRole("org_admin");
-      setUserName("Management Admin");
-    } else {
+    if (path.startsWith("/student")) {
+      setRole("student");
       const studentData = localStorage.getItem("student");
       if (studentData) {
         try {
           const s = JSON.parse(studentData);
-          setRole("student");
           setUserDomain(s.soiLabVertical || s.department || "All");
           setUserName(s.studentName || "Student");
         } catch (e) {}
       }
+    } else if (path.startsWith("/org-admin")) {
+      setRole("org_admin");
+      const adminData = localStorage.getItem("admin");
+      if (adminData) {
+        try {
+          const parsed = JSON.parse(adminData);
+          setUserDomain(parsed.domain || "All");
+          setUserName(parsed.name || parsed.username || "Management Admin");
+        } catch (e) {}
+      } else {
+        setUserName("Management Admin");
+      }
+    } else if (path.startsWith("/admin")) {
+      setRole("domain_admin");
+      const adminData = localStorage.getItem("admin");
+      if (adminData) {
+        try {
+          const parsed = JSON.parse(adminData);
+          setUserDomain(parsed.domain || "All");
+          setUserName(parsed.name || parsed.username || "Admin");
+        } catch (e) {}
+      }
+    } else {
+      const studentData = localStorage.getItem("student");
+      const adminData = localStorage.getItem("admin");
+      if (studentData && !adminData) {
+        setRole("student");
+      } else if (adminData) {
+        try {
+          const parsed = JSON.parse(adminData);
+          setRole(parsed.role || "domain_admin");
+        } catch (e) {
+          setRole("domain_admin");
+        }
+      }
     }
 
-    fetchNewsAndEvents();
-  }, []);
+    fetchNewsAndEvents(path);
+  }, [location.pathname]);
 
   const getApiUrl = (path) => {
     const base = import.meta.env.VITE_API_URL || "";
     return `${base}${path}`;
   };
 
-  const fetchNewsAndEvents = async () => {
+  const fetchNewsAndEvents = async (currentPath = location.pathname) => {
     try {
       setLoading(true);
 
-      // Detect org admin status
-      const adminData = localStorage.getItem("admin");
-      let isOrg = false;
-      if (adminData) {
-        try {
-          const parsed = JSON.parse(adminData);
-          if (parsed.role === "org_admin") isOrg = true;
-        } catch (e) {}
-      }
+      const isOrg = currentPath.startsWith("/org-admin");
 
       // Fetch News
       let newsRes;
@@ -123,6 +140,8 @@ function NewsEvents() {
         if (reqRes.data.success) {
           setRequests(reqRes.data.requests || []);
         }
+      } else {
+        setRequests([]);
       }
     } catch (error) {
       console.error("Error loading news & events:", error);
@@ -269,22 +288,16 @@ function NewsEvents() {
   };
 
   return (
-    <div className={`news-events-container ${role === "org_admin" || role === "domain_admin" ? "with-sidebar" : ""}`}>
+    <div className="news-events-container with-sidebar">
       {role === "org_admin" ? (
         <OrgAdminSidebar />
       ) : role === "domain_admin" ? (
         <Sidebar />
-      ) : null}
+      ) : (
+        <StudentSidebar />
+      )}
 
       <main className="news-events-content">
-        {role === "student" && (
-          <div className="student-news-header">
-            <button className="btn-back" onClick={() => navigate("/student/dashboard")}>
-              ⬅️ Back to Student Dashboard
-            </button>
-            <span className="student-badge">🎓 {userName} ({userDomain})</span>
-          </div>
-        )}
 
         {/* Header */}
         <div className="page-header">
