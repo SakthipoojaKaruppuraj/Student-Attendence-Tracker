@@ -111,6 +111,7 @@ model News {
   title     String
   content   String
   category  String?  @default("Announcement")
+  imageUrl  String?
   postedBy  String   @default("Management Admin")
   createdAt DateTime @default(now())
 
@@ -127,6 +128,7 @@ model Event {
   venue         String?
   domain        String   @default("All")
   organizer     String
+  imageUrl      String?
   status        String   @default("Pending") // "Pending", "Approved", "Rejected"
   feedback      String?
   createdByRole String   @default("domain_admin")

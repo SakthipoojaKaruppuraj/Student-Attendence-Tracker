@@ -30,6 +30,107 @@ function StudentDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const formatDateDDMMM = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const parts = dateStr.trim().split("-");
+      if (parts.length === 3 && parts[0].length === 4) {
+        const year = parts[0];
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const day = parts[2].padStart(2, "0");
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        if (monthIdx >= 0 && monthIdx < 12) {
+          return `${day}-${months[monthIdx]}-${year}`;
+        }
+      }
+      return dateStr;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const getDayName = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const parts = dateStr.trim().split("-");
+      if (parts.length === 3 && parts[0].length === 4) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d = new Date(year, month, day);
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        return days[d.getDay()];
+      }
+      return "-";
+    } catch (e) {
+      return "-";
+    }
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const getAttendanceDateBounds = (records) => {
+    if (!records || records.length === 0) {
+      return { minDateStr: "2026-08-03", maxDateStr: "2026-11-29" };
+    }
+    let minDateStr = records[0].date;
+    let maxDateStr = records[0].date;
+
+    records.forEach((r) => {
+      if (r.date) {
+        if (r.date < minDateStr) minDateStr = r.date;
+        if (r.date > maxDateStr) maxDateStr = r.date;
+      }
+    });
+
+    return { minDateStr, maxDateStr };
+  };
+
+  const generateFullAttendanceList = (records) => {
+    if (!records || records.length === 0) return [];
+
+    const recordMap = new Map();
+    records.forEach((r) => {
+      if (r.date) recordMap.set(r.date.trim(), r);
+    });
+
+    const { minDateStr, maxDateStr } = getAttendanceDateBounds(records);
+    const minParts = minDateStr.split("-");
+    const maxParts = maxDateStr.split("-");
+
+    const minDate = new Date(parseInt(minParts[0], 10), parseInt(minParts[1], 10) - 1, parseInt(minParts[2], 10));
+    const maxDate = new Date(parseInt(maxParts[0], 10), parseInt(maxParts[1], 10) - 1, parseInt(maxParts[2], 10));
+
+    const fullList = [];
+    const current = new Date(minDate);
+
+    while (current <= maxDate) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, "0");
+      const d = String(current.getDate()).padStart(2, "0");
+      const dateStr = `${y}-${m}-${d}`;
+
+      if (recordMap.has(dateStr)) {
+        fullList.push(recordMap.get(dateStr));
+      } else {
+        const isSunday = current.getDay() === 0;
+        fullList.push({
+          id: `gen-${dateStr}`,
+          date: dateStr,
+          status: isSunday ? "H" : "NT",
+          remarks: isSunday ? "Sunday" : "-",
+        });
+      }
+
+      current.setDate(current.getDate() + 1);
+    }
+
+    fullList.sort((a, b) => (a.date < b.date ? 1 : -1));
+    return fullList;
+  };
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const tabParam = searchParams.get("tab");
@@ -249,83 +350,151 @@ function StudentDashboard() {
 
         {/* TAB 1: ATTENDANCE */}
         {activeTab === "attendance" && (
-          <>
-            {/* KPI Grid */}
-            <div className="kpi-grid">
-              <div className={`kpi-card ${(stats?.attendancePercentage || 0) >= 75 ? "green" : "amber"}`}>
-                <div className="kpi-title">Overall Attendance</div>
-                <div className="kpi-value">{stats?.attendancePercentage ?? 0}%</div>
-                <div className="kpi-subtext">
-                  {(stats?.presentDays || 0) + (stats?.odDays || 0)} of {stats?.totalDays || 0} Sessions Attended
+          <div className="attendance-printable-area">
+            {/* Top PDF Export Button Bar */}
+            <div className="attendance-export-bar">
+              <button
+                className="btn-export-pdf"
+                onClick={handleExportPDF}
+                title="Download / Export PDF Report"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9.5 15.5H8V10H9.5C10.3 10 11 10.7 11 11.5V14C11 14.8 10.3 15.5 9.5 15.5ZM13.5 15.5H12V10H13.5C14.3 10 15 10.7 15 11.5V14C15 14.8 14.3 15.5 13.5 15.5ZM17.5 11.5H16V13H17.5V14.25H16V15.5H14.75V10H17.5V11.5Z"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Top 4 Metric Cards */}
+            <div className="attendance-metric-grid">
+              <div className="attendance-card present">
+                <div className="card-metric-label">PRESENT (HOURS)</div>
+                <div className="card-metric-value">
+                  {(stats?.presentDays || 0) * 7 || 0}
                 </div>
               </div>
 
-              <div className="kpi-card green">
-                <div className="kpi-title">Present & OD Days</div>
-                <div className="kpi-value">{(stats?.presentDays || 0) + (stats?.odDays || 0)}</div>
-                <div className="kpi-subtext">
-                  {stats?.presentDays || 0} Present | {stats?.odDays || 0} On-Duty
+              <div className="attendance-card absent">
+                <div className="card-metric-label">ABSENT (HOURS)</div>
+                <div className="card-metric-value">
+                  {(stats?.absentDays || 0) * 7 || 0}
                 </div>
               </div>
 
-              <div className="kpi-card purple">
-                <div className="kpi-title">Tasks Completed</div>
-                <div className="kpi-value">
-                  {stats?.completedTasks || 0} / {stats?.totalAssignedTasks || 0}
-                </div>
-                <div className="kpi-subtext">
-                  {stats?.pendingTasks || 0} Tasks Pending Submission
+              <div className="attendance-card od">
+                <div className="card-metric-label">OD (HOURS)</div>
+                <div className="card-metric-value">
+                  {(stats?.odDays || 0) * 7 || 0}
                 </div>
               </div>
 
-              <div className="kpi-card">
-                <div className="kpi-title">Department & Vertical</div>
-                <div className="kpi-value" style={{ fontSize: "1.3rem", paddingTop: "6px" }}>
-                  {studentData?.soiLabVertical || studentData?.department || "General"}
+              <div className="attendance-card ml">
+                <div className="card-metric-label">ML (HOURS)</div>
+                <div className="card-metric-value">
+                  {(stats?.mlDays || 0) * 7 || 0}
                 </div>
-                <div className="kpi-subtext">{studentData?.department} ({studentData?.section || "A"})</div>
               </div>
             </div>
 
-            <div className="data-table-wrapper">
+            {/* Sub-Summary Banner Box */}
+            <div className="attendance-summary-banner">
+              <div className="summary-banner-col">
+                <div className="banner-val">
+                  {formatDateDDMMM(getAttendanceDateBounds(attendanceRecords).minDateStr)}
+                </div>
+                <div className="banner-lbl">OPEN DATE</div>
+              </div>
+
+              <div className="summary-banner-col">
+                <div className="banner-val">
+                  {formatDateDDMMM(getAttendanceDateBounds(attendanceRecords).maxDateStr)}
+                </div>
+                <div className="banner-lbl">CLOSE DATE</div>
+              </div>
+
+              <div className="summary-banner-col">
+                <div className="banner-val">
+                  {((stats?.presentDays || 0) + (stats?.odDays || 0)) * 7 || 0}
+                </div>
+                <div className="banner-lbl">WORKED (HOURS)</div>
+              </div>
+
+              <div className="summary-banner-col">
+                <div className="banner-val">{stats?.attendancePercentage ?? 0}%</div>
+                <div className="banner-lbl">ATTENDANCE(%)</div>
+              </div>
+            </div>
+
+            {/* Status Legend Row */}
+            <div className="attendance-legend-bar">
+              <span className="legend-item p">P: Present</span>
+              <span className="legend-item a">A: Absent</span>
+              <span className="legend-item nt">NT: Attendance Not Taken</span>
+              <span className="legend-item od">OD: On Duty</span>
+              <span className="legend-item ml">ML: Medical Leave</span>
+            </div>
+
+            {/* Detailed Data Table */}
+            <div className="attendance-table-container">
               {attendanceRecords.length === 0 ? (
                 <p style={{ padding: "32px", textAlign: "center", color: "#64748b", fontSize: "0.95rem" }}>
                   No attendance records logged yet for your profile.
                 </p>
               ) : (
-                <table className="custom-table">
+                <table className="attendance-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Remarks</th>
+                      <th className="col-index">#</th>
+                      <th className="col-date">Date</th>
+                      <th className="col-day">Day</th>
+                      <th className="col-desc">Description</th>
+                      <th className="col-daytype">Day Type</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {attendanceRecords.map((rec) => (
-                      <tr key={rec.id}>
-                        <td><strong>{rec.date}</strong></td>
-                        <td>
-                          <span className={`status-badge ${String(rec.status || "").toLowerCase()}`}>
-                            {rec.status === "P"
-                              ? "Present (P)"
-                              : rec.status === "A"
-                              ? "Absent (A)"
-                              : rec.status === "OD"
-                              ? "On-Duty (OD)"
-                              : rec.status === "ML"
-                              ? "Medical Leave (ML)"
-                              : rec.status || "Present"}
-                          </span>
-                        </td>
-                        <td style={{ color: "#64748b" }}>{rec.remarks || "-"}</td>
-                      </tr>
-                    ))}
+                    {generateFullAttendanceList(attendanceRecords).map((rec, idx) => {
+                      const dayName = getDayName(rec.date);
+                      const isSunday = dayName === "Sun";
+                      const isHoliday = rec.status === "H" || isSunday;
+                      const description = rec.remarks || (isSunday ? "Sunday" : "-");
+                      const dayType = isHoliday
+                        ? rec.remarks && rec.remarks !== "-"
+                          ? `Holiday (${rec.remarks})`
+                          : "Holiday"
+                        : rec.status === "P"
+                        ? "Present (P)"
+                        : rec.status === "A"
+                        ? "Absent (A)"
+                        : rec.status === "OD"
+                        ? "On Duty (OD)"
+                        : rec.status === "ML"
+                        ? "Medical Leave (ML)"
+                        : rec.status === "NT"
+                        ? "Attendance Not Taken"
+                        : rec.status || "Present";
+
+                      const statusClass = isHoliday
+                        ? "holiday"
+                        : String(rec.status || "").toLowerCase();
+
+                      return (
+                        <tr key={rec.id || idx}>
+                          <td className="col-index">{idx + 1}</td>
+                          <td className="col-date">{formatDateDDMMM(rec.date)}</td>
+                          <td className="col-day">{dayName}</td>
+                          <td className="col-desc">{description}</td>
+                          <td className="col-daytype">
+                            <span className={`status-pill-badge ${statusClass}`}>
+                              {dayType}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* TAB 2: TASKS & SUBMISSIONS */}
