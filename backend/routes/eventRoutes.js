@@ -36,7 +36,7 @@ router.get("/news", async (req, res) => {
 // POST News (Org Admin Only)
 router.post("/news", requireOrgAdmin, async (req, res) => {
   try {
-    const { title, content, category } = req.body;
+    const { title, content, category, imageUrl } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
@@ -50,6 +50,7 @@ router.post("/news", requireOrgAdmin, async (req, res) => {
         title: title.trim(),
         content: content.trim(),
         category: category ? category.trim() : "Announcement",
+        imageUrl: imageUrl ? imageUrl.trim() : null,
         postedBy: req.user?.username || "Management Admin",
       },
     });
@@ -155,7 +156,7 @@ router.get("/requests", requireOrgAdmin, async (req, res) => {
 // POST New Event (Domain Admin proposes -> Pending, Org Admin posts -> Approved)
 router.post("/", async (req, res) => {
   try {
-    const { title, description, eventDate, eventTime, venue, domain, organizer, role, createdById } = req.body;
+    const { title, description, eventDate, eventTime, venue, domain, organizer, role, createdById, imageUrl } = req.body;
 
     if (!title || !description || !eventDate) {
       return res.status(400).json({
@@ -178,6 +179,7 @@ router.post("/", async (req, res) => {
         venue: venue ? venue.trim() : "Campus Hall",
         domain: domain ? domain.trim() : "All",
         organizer: organizer ? organizer.trim() : "Domain Admin",
+        imageUrl: imageUrl ? imageUrl.trim() : null,
         status: initialStatus,
         createdByRole: role || "domain_admin",
         createdById: createdById || "ADM_UNKNOWN",

@@ -253,10 +253,14 @@ router.get("/me/progress", async (req, res) => {
     const absentDays = attendanceRecords.filter((r) => r.status === "A").length;
     const odDays = attendanceRecords.filter((r) => r.status === "OD").length;
     const mlDays = attendanceRecords.filter((r) => r.status === "ML").length;
+    const holidayDays = attendanceRecords.filter((r) => r.status === "H").length;
+
+    // Academic working days (excluding holidays)
+    const workingDays = presentDays + absentDays + odDays + mlDays;
 
     // OD counts towards present percentage
     const attendancePercentage =
-      totalDays > 0 ? Math.round(((presentDays + odDays) / totalDays) * 100) : 100;
+      workingDays > 0 ? Math.round(((presentDays + odDays) / workingDays) * 100) : 100;
 
     // 2. Tasks assigned to student's year and domain/vertical
     const allTasks = await prisma.task.findMany({
@@ -356,10 +360,17 @@ router.get("/me/progress", async (req, res) => {
       },
       stats: {
         totalDays,
+        workingDays,
+        holidayDays,
         presentDays,
         absentDays,
         odDays,
         mlDays,
+        presentHours: presentDays * 7,
+        absentHours: absentDays * 7,
+        odHours: odDays * 7,
+        mlHours: mlDays * 7,
+        workedHours: (presentDays + odDays) * 7,
         attendancePercentage,
         totalAssignedTasks,
         completedTasks,
